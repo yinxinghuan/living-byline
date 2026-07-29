@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta name="game-uuid" content="8988197c-0f5b-4384-9841-06ea166314fe" />
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#07090d" />
+    <title>Living Byline</title>
+    <style id="alteru-long-press-guard">html,body,#app,#root{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}input,textarea,[contenteditable="true"]{-webkit-touch-callout:default;-webkit-user-select:text;user-select:text}img,svg,canvas{-webkit-user-drag:none}</style>
+    <style>
+      html,body{margin:0;min-height:100%;background:#07090d;color:#f3f0e8}
+      .lb-boot{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#07090d;transition:opacity .32s ease,visibility .32s}
+      .lb-boot.is-ready{opacity:0;visibility:hidden;pointer-events:none}
+      .lb-boot__mark{position:relative;width:88px;height:56px;border:1px solid rgba(243,240,232,.32)}
+      .lb-boot__mark::before,.lb-boot__mark::after{content:"";position:absolute;inset:9px;background:#ff5b4d;animation:lb-boot-scan 1.2s cubic-bezier(.2,.8,.2,1) infinite alternate}
+      .lb-boot__mark::after{background:#4d7cff;mix-blend-mode:screen;animation-delay:-.6s}
+      .lb-boot__label{margin-top:18px;font:700 10px/1 ui-monospace,monospace;letter-spacing:.24em;text-align:center}
+      @keyframes lb-boot-scan{from{transform:translateX(-18px) skewY(-8deg)}to{transform:translateX(18px) skewY(8deg)}}
+      @media(prefers-reduced-motion:reduce){.lb-boot__mark::before,.lb-boot__mark::after{animation:none}}
+    </style>
+    <script src="https://images.aiwaves.tech/alteru/guest-shell.js" defer></script>
+  </head>
+  <body>
+    <div class="lb-boot" role="status" aria-live="polite">
+      <div><div class="lb-boot__mark" aria-hidden="true"></div><div class="lb-boot__label">LIVING BYLINE</div></div>
+    </div>
+    <main id="app"></main>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
