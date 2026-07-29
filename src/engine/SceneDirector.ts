@@ -6,8 +6,6 @@ import {
 } from './ProjectedMaterial'
 
 type DirectorEvents = {
-  onPin: (index: number, total: number) => void
-  onComplete: (level: number) => void
   onError: (error: Error) => void
 }
 
@@ -16,13 +14,6 @@ type PieceState = {
   targetRotation: THREE.Euler
   scatterPosition: THREE.Vector3
   scatterRotation: THREE.Euler
-}
-
-type AnchorState = {
-  hit: THREE.Mesh
-  visual: THREE.Mesh
-  active: boolean
-  index: number
 }
 
 export class SceneDirector {
@@ -34,23 +25,17 @@ export class SceneDirector {
   private readonly camera = new THREE.PerspectiveCamera(42, 1, 0.1, 80)
   private readonly projector = new THREE.PerspectiveCamera(39, 1, 0.1, 40)
   private readonly clock = new THREE.Clock()
-  private readonly raycaster = new THREE.Raycaster()
-  private readonly pointer = new THREE.Vector2()
   private readonly projectedMaterial: THREE.ShaderMaterial
   private readonly projectionUniforms: ProjectionUniforms
   private readonly root = new THREE.Group()
   private readonly pieces: THREE.Object3D[] = []
-  private readonly anchors: AnchorState[] = []
   private readonly reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
-  private level = 0
   private progress = 0
   private alignment = 0
   private targetYaw = 0
   private yaw = 0
   private targetPitch = -0.05
   private pitch = -0.05
-  private boost = 0
-  private boostTarget = 0
   private ghostPreview = false
   private running = true
   private inViewport = true
@@ -58,10 +43,10 @@ export class SceneDirector {
   private pointerId: number | null = null
   private pointerStart = new THREE.Vector2()
   private pointerPrevious = new THREE.Vector2()
-  private dragged = false
-  private holdTimer = 0
   private transition = 1
   private transitionTarget = 1
+  private viewMode = false
+  private impact = 0
   private resizeObserver: ResizeObserver
   private intersectionObserver: IntersectionObserver
 
@@ -123,9 +108,10 @@ export class SceneDirector {
   async goToLevel(level: number) {
     this.transitionTarget = 0
     await delay(this.reducedMotion ? 80 : 430)
-    this.level = level
     this.progress = 0
     this.alignment = 0
+    this.viewMode = false
+    this.impact = 0
     this.targetYaw = this.yaw = 0
     this.targetPitch = this.pitch = -0.05
     await this.identityTexture.render(level)
@@ -142,9 +128,13 @@ export class SceneDirector {
     this.ghostPreview = active
   }
 
-  activateNextForKeyboard() {
-    const next = this.anchors.find((anchor) => !anchor.active)
-    if (next) this.activateAnchor(next)
+  setAssemblyProgress(value: number) {
+    this.progress = THREE.MathUtils.clamp(value, 0, 1)
+    this.impact = 1
+  }
+
+  setViewMode(active: boolean) {
+    this.viewMode = active
   }
 
   rotateByKeyboard(x: number, y: number) {
@@ -179,16 +169,12 @@ export class SceneDirector {
   }
 
   private onPointerDown = (event: PointerEvent) => {
+    if (!this.viewMode) return
     if (this.pointerId !== null) return
     this.pointerId = event.pointerId
-    this.dragged = false
     this.pointerStart.set(event.clientX, event.clientY)
     this.pointerPrevious.copy(this.pointerStart)
     this.renderer.domElement.setPointerCapture(event.pointerId)
-    window.clearTimeout(this.holdTimer)
-    this.holdTimer = window.setTimeout(() => {
-      if (!this.dragged) this.boostTarget = 1
-    }, 420)
   }
 
   private onPointerMove = (event: PointerEvent) => {
@@ -196,8 +182,6 @@ export class SceneDirector {
     const current = new THREE.Vector2(event.clientX, event.clientY)
     const distance = current.distanceTo(this.pointerStart)
     if (distance > 8) {
-      this.dragged = true
-      window.clearTimeout(this.holdTimer)
       const delta = current.clone().sub(this.pointerPrevious)
       this.targetYaw = THREE.MathUtils.clamp(this.targetYaw - delta.x * 0.006, -0.62, 0.62)
       this.targetPitch = THREE.MathUtils.clamp(this.targetPitch - delta.y * 0.004, -0.28, 0.24)
@@ -207,44 +191,9 @@ export class SceneDirector {
 
   private onPointerUp = (event: PointerEvent) => {
     if (event.pointerId !== this.pointerId) return
-    window.clearTimeout(this.holdTimer)
-    this.boostTarget = 0
-    if (!this.dragged) this.pickAnchor(event.clientX, event.clientY)
     this.pointerId = null
     if (this.renderer.domElement.hasPointerCapture(event.pointerId)) {
       this.renderer.domElement.releasePointerCapture(event.pointerId)
-    }
-  }
-
-  private pickAnchor(clientX: number, clientY: number) {
-    const rect = this.renderer.domElement.getBoundingClientRect()
-    this.pointer.set(
-      ((clientX - rect.left) / rect.width) * 2 - 1,
-      -((clientY - rect.top) / rect.height) * 2 + 1,
-    )
-    this.raycaster.setFromCamera(this.pointer, this.camera)
-    const hitTargets = this.anchors.filter((anchor) => !anchor.active).map((anchor) => anchor.hit)
-    const hit = this.raycaster.intersectObjects(hitTargets, false)[0]?.object
-    const anchor = this.anchors.find((candidate) => candidate.hit === hit)
-    if (anchor) this.activateAnchor(anchor)
-  }
-
-  private activateAnchor(anchor: AnchorState) {
-    if (anchor.active) return
-    anchor.active = true
-    const material = anchor.visual.material as THREE.MeshStandardMaterial
-    material.color.set('#a8ffd8')
-    material.emissive.set('#58cf9c')
-    material.emissiveIntensity = 1.8
-    anchor.visual.userData.activatedAt = this.clock.elapsedTime
-    const total = this.anchors.filter((candidate) => candidate.active).length
-    this.progress = total / this.anchors.length
-    this.events.onPin(anchor.index, total)
-    if (total === this.anchors.length) {
-      window.setTimeout(
-        () => this.events.onComplete(this.level),
-        this.reducedMotion ? 80 : 720,
-      )
     }
   }
 
@@ -254,7 +203,6 @@ export class SceneDirector {
     if (level === 0) this.buildThreshold()
     if (level === 1) this.buildFoldTheatre()
     if (level === 2) this.buildOrbitPress()
-    this.buildAnchors(level)
     this.buildGround(level)
   }
 
@@ -339,36 +287,6 @@ export class SceneDirector {
     this.pieces.push(mesh)
   }
 
-  private buildAnchors(level: number) {
-    const layouts: Array<Array<[number, number, number]>> = [
-      [[-1.55, 1.48, 0.62], [1.46, 0.28, 0.8], [-0.2, -1.55, 1.15]],
-      [[-1.78, 0.95, 1.15], [0, -1.3, 1.3], [1.78, 0.95, 1.15]],
-      [[-1.85, -0.8, 1.4], [0.15, 1.55, 1.65], [1.85, -0.65, 1.35]],
-    ]
-    layouts[level].forEach((position, index) => {
-      const visualMaterial = new THREE.MeshStandardMaterial({
-        color: level === 1 ? '#4d7cff' : '#ff5b4d',
-        emissive: level === 1 ? '#2448c9' : '#a32620',
-        emissiveIntensity: 1.25,
-        roughness: 0.34,
-        metalness: 0.38,
-      })
-      const visual = new THREE.Mesh(new THREE.IcosahedronGeometry(0.19, 1), visualMaterial)
-      visual.position.set(...position)
-      const hit = new THREE.Mesh(
-        new THREE.SphereGeometry(0.55, 16, 12),
-        new THREE.MeshBasicMaterial({
-          transparent: true,
-          opacity: 0,
-          depthWrite: false,
-        }),
-      )
-      hit.position.copy(visual.position)
-      this.root.add(visual, hit)
-      this.anchors.push({ visual, hit, active: false, index })
-    })
-  }
-
   private buildGround(level: number) {
     const grid = new THREE.GridHelper(
       22,
@@ -397,7 +315,6 @@ export class SceneDirector {
       this.root.remove(child)
     }
     this.pieces.length = 0
-    this.anchors.length = 0
   }
 
   private resize() {
@@ -436,7 +353,7 @@ export class SceneDirector {
     const damping = this.reducedMotion ? 1 : 0.08
     this.yaw = THREE.MathUtils.lerp(this.yaw, this.targetYaw, damping)
     this.pitch = THREE.MathUtils.lerp(this.pitch, this.targetPitch, damping)
-    this.boost = THREE.MathUtils.lerp(this.boost, this.boostTarget, this.reducedMotion ? 1 : 0.1)
+    this.impact = THREE.MathUtils.lerp(this.impact, 0, this.reducedMotion ? 1 : 0.12)
     this.alignment = THREE.MathUtils.lerp(
       this.alignment,
       this.progress,
@@ -457,7 +374,7 @@ export class SceneDirector {
 
     const ghostWave = this.ghostPreview ? Math.max(0, Math.sin(elapsed * 3.4)) : 0
     this.projectionUniforms.reveal.value = 0.16 + this.alignment * 0.84
-    this.projectionUniforms.boost.value = Math.max(this.boost, ghostWave * 0.28)
+    this.projectionUniforms.boost.value = Math.max(ghostWave * 0.28, this.impact * 0.46)
     this.projectionUniforms.time.value = elapsed
 
     for (const piece of this.pieces) {
@@ -470,18 +387,7 @@ export class SceneDirector {
       )
     }
 
-    this.anchors.forEach((anchor, index) => {
-      const activatedAt = Number(anchor.visual.userData.activatedAt ?? -10)
-      const hitPulse = Math.max(0, 1 - (elapsed - activatedAt) / 0.42)
-      const preview = !anchor.active && index === 0 ? ghostWave * 0.16 : 0
-      const base = anchor.active ? 1.16 : 1
-      const scale = base + Math.sin(elapsed * 3 + index) * 0.06 + hitPulse * 0.52 + preview
-      anchor.visual.scale.setScalar(scale)
-      anchor.visual.rotation.x = elapsed * 0.32 + index
-      anchor.visual.rotation.y = elapsed * 0.48 - index
-    })
-
-    this.root.scale.setScalar(0.92 + this.transition * 0.08)
+    this.root.scale.setScalar(0.92 + this.transition * 0.08 + this.impact * 0.018)
     this.root.rotation.z = (1 - this.transition) * 0.08
     this.renderFrame()
     this.syncLoop()
@@ -493,7 +399,6 @@ export class SceneDirector {
 
   dispose() {
     cancelAnimationFrame(this.frame)
-    window.clearTimeout(this.holdTimer)
     this.resizeObserver.disconnect()
     this.intersectionObserver.disconnect()
     document.removeEventListener('visibilitychange', this.onVisibility)

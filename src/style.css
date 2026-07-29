@@ -112,7 +112,7 @@ button {
   max-width: min(58vw, 300px);
   overflow: hidden;
   color: var(--lb-paper);
-  font: 900 clamp(28px, 8vw, 48px) / 0.9 "Arial Black", "Helvetica Neue", "PingFang SC", sans-serif;
+  font: 900 clamp(24px, 6.6vw, 38px) / 0.92 "Arial Black", "Helvetica Neue", "PingFang SC", sans-serif;
   letter-spacing: -0.075em;
   overflow-wrap: anywhere;
 }
@@ -170,6 +170,115 @@ button {
   width: 8px;
   height: 1px;
   background: var(--lb-coral);
+}
+
+.lb-route {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  touch-action: none;
+  cursor: crosshair;
+  transition: opacity 0.28s ease;
+}
+
+.lb-route.is-complete {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lb-route__line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.lb-route__line path {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lb-route__line [data-route-base] {
+  stroke: rgba(243, 240, 232, 0.22);
+  stroke-width: 1.5;
+  stroke-dasharray: 0.012 0.018;
+}
+
+.lb-route__line [data-route-active] {
+  stroke: var(--lb-mint);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 8px rgba(168, 255, 216, 0.72));
+  transition: stroke-dasharray 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.lb-route__node {
+  position: absolute;
+  left: var(--lb-node-x);
+  top: var(--lb-node-y);
+  width: 68px;
+  height: 68px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: rgba(243, 240, 232, 0.48);
+  background:
+    radial-gradient(circle, rgba(7, 9, 13, 0.9) 0 29%, transparent 31%),
+    conic-gradient(from 0deg, transparent 0 12%, rgba(243, 240, 232, 0.42) 12% 14%, transparent 14% 37%, rgba(243, 240, 232, 0.42) 37% 39%, transparent 39% 62%, rgba(243, 240, 232, 0.42) 62% 64%, transparent 64% 87%, rgba(243, 240, 232, 0.42) 87% 89%, transparent 89%);
+  box-shadow: inset 0 0 0 1px rgba(243, 240, 232, 0.28);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition:
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s ease;
+}
+
+.lb-route__node span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font: 800 12px / 1 ui-monospace, "SFMono-Regular", monospace;
+}
+
+.lb-route__node.is-current {
+  color: var(--lb-paper);
+  box-shadow:
+    inset 0 0 0 2px var(--lb-coral),
+    0 0 0 9px rgba(255, 91, 77, 0.12),
+    0 0 24px rgba(255, 91, 77, 0.34);
+  animation: lb-node-breathe 1.15s ease-in-out infinite alternate;
+}
+
+.lb-route.is-tracing .lb-route__node.is-current {
+  transform: translate(-50%, -50%) scale(0.88);
+}
+
+.lb-route__node.is-active {
+  color: var(--lb-ink);
+  background: var(--lb-mint);
+  box-shadow:
+    inset 0 0 0 2px var(--lb-ink),
+    0 0 0 6px rgba(168, 255, 216, 0.16),
+    0 0 22px rgba(168, 255, 216, 0.45);
+  transform: translate(-50%, -50%) scale(0.82) rotate(45deg);
+  animation: none;
+}
+
+.lb-route__node.is-active span {
+  transform: rotate(-45deg);
+}
+
+.lb-route.is-previewing .lb-route__node.is-current {
+  box-shadow:
+    inset 0 0 0 2px var(--lb-coral),
+    0 0 0 15px rgba(255, 91, 77, 0.08),
+    0 0 32px rgba(255, 91, 77, 0.48);
 }
 
 .lb-progress {
@@ -237,8 +346,8 @@ button {
 .lb-ghost {
   position: absolute;
   z-index: 4;
-  left: 20%;
-  top: 52%;
+  left: 18%;
+  top: 38%;
   width: 58px;
   height: 58px;
   color: var(--lb-paper);
@@ -452,21 +561,30 @@ button {
 @keyframes lb-ghost-touch {
   0% {
     opacity: 0;
-    transform: translate(-6vw, 28px) scale(0.9);
+    transform: translate(-50%, -50%) scale(0.9);
   }
   16%,
   78% {
     opacity: 0.94;
   }
   42% {
-    transform: translate(24vw, -36px) scale(1);
+    transform: translate(calc(60vw - 50%), calc(12vh - 50%)) scale(1);
   }
   62% {
-    transform: translate(33vw, 2px) scale(0.92);
+    transform: translate(calc(60vw - 50%), calc(12vh - 50%)) scale(0.92);
   }
   100% {
     opacity: 0;
-    transform: translate(50vw, -20px) scale(0.86);
+    transform: translate(calc(16vw - 50%), calc(38vh - 50%)) scale(0.86);
+  }
+}
+
+@keyframes lb-node-breathe {
+  from {
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1.05);
   }
 }
 
@@ -490,7 +608,7 @@ button {
 
   .lb-hud strong {
     max-width: 58vw;
-    font-size: clamp(25px, 8.4vw, 34px);
+    font-size: clamp(23px, 7.2vw, 31px);
   }
 
   .lb-hud__level strong {
@@ -518,6 +636,11 @@ button {
 
   .lb-complete__action span {
     display: none;
+  }
+
+  .lb-route__node {
+    width: 62px;
+    height: 62px;
   }
 }
 

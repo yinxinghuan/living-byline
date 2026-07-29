@@ -4,7 +4,7 @@ import { chromium } from '/Users/yin/.cache/codex-runtimes/codex-primary-runtime
 
 const root = '/Users/yin/code/games/living-byline'
 const port = '61289'
-const evidenceRound = 'recheck'
+const evidenceRound = 'playability-recheck'
 const vite = `${root}/node_modules/vite/bin/vite.js`
 const server = spawn(process.execPath, [vite, '--host', '127.0.0.1', '--port', port], {
   cwd: root,
@@ -15,6 +15,37 @@ await new Promise((resolve) => setTimeout(resolve, 1200))
 
 const browser = await chromium.launch({ headless: true })
 const failures = []
+
+async function traceRoute(page) {
+  const points = await page.locator('[data-route-node]').evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const rect = node.getBoundingClientRect()
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+    }),
+  )
+  const client = await page.context().newCDPSession(page)
+  await client.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: points[0].x, y: points[0].y, id: 1 }],
+  })
+  for (let index = 1; index < points.length; index += 1) {
+    const from = points[index - 1]
+    const to = points[index]
+    for (let step = 1; step <= 10; step += 1) {
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{
+          x: from.x + (to.x - from.x) * (step / 10),
+          y: from.y + (to.y - from.y) * (step / 10),
+          id: 1,
+        }],
+      })
+      await page.waitForTimeout(12)
+    }
+  }
+  await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await client.detach()
+}
 
 for (const [label, width, height] of [
   ['390x844', 390, 844],
@@ -83,15 +114,7 @@ for (const [label, width, height] of [
     path: `${root}/_qa/ui/${evidenceRound}-entry-platform-layout-${label}.png`,
   })
 
-  const anchorPoints = [
-    [width === 320 ? 0.125 : 0.052, 0.29],
-    [width === 320 ? 0.847 : 0.93, 0.454],
-    [0.44, 0.716],
-  ]
-  for (const [x, y] of anchorPoints) {
-    await page.touchscreen.tap(width * x, height * y)
-    await page.waitForTimeout(120)
-  }
+  await traceRoute(page)
   await page.waitForFunction(() => window.__livingByline?.complete === true)
   await page.screenshot({
     path: `${root}/_qa/ui/${evidenceRound}-level1-complete-platform-layout-${label}.png`,
@@ -104,15 +127,15 @@ for (const [label, width, height] of [
     path: `${root}/_qa/ui/${evidenceRound}-level2-platform-layout-${label}.png`,
   })
 
-  for (let index = 0; index < 3; index += 1) {
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(120)
-  }
+  await traceRoute(page)
   await page.waitForFunction(() => window.__livingByline?.complete === true)
   await page.locator('.lb-complete__action').click()
   await page.waitForFunction(() => window.__livingByline?.level === 2)
   await page.waitForTimeout(900)
 
+  await traceRoute(page)
+  await page.waitForFunction(() => window.__livingByline?.complete === true)
+  await page.waitForTimeout(900)
   const beforeDrag = await page.locator('canvas').screenshot()
   await page.mouse.move(width * 0.22, height * 0.52)
   await page.mouse.down()
@@ -121,15 +144,8 @@ for (const [label, width, height] of [
   await page.waitForTimeout(320)
   const afterDrag = await page.locator('canvas').screenshot()
   if (Buffer.compare(beforeDrag, afterDrag) === 0) {
-    failures.push(`${label}: canvas did not change after drag`)
+    failures.push(`${label}: completed canvas did not change after drag`)
   }
-
-  for (let index = 0; index < 3; index += 1) {
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(120)
-  }
-  await page.waitForFunction(() => window.__livingByline?.complete === true)
-  await page.waitForTimeout(900)
   await page.screenshot({
     path: `${root}/_qa/ui/${evidenceRound}-final-platform-layout-${label}.png`,
   })

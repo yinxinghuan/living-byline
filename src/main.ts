@@ -43,8 +43,16 @@ let pins = 0
 let complete = false
 let ghostTimer = 0
 let ghostEndTimer = 0
+let completionTimer = 0
+let routePointerId: number | null = null
 let identitySource: 'query' | 'player' | 'brand' = 'brand'
 const sound = new SoundEngine()
+
+const routes = [
+  [[18, 38], [78, 50], [34, 76]],
+  [[18, 64], [50, 38], [82, 64]],
+  [[24, 68], [50, 36], [78, 64]],
+] as const
 
 void start()
 
@@ -63,18 +71,6 @@ async function start() {
     stage,
     { name: identity.name, platform: 'AlterU' },
     {
-      onPin: (index, total) => {
-        pins = total
-        sound.pin(index)
-        updatePinUi()
-        syncQa()
-      },
-      onComplete: (completedLevel) => {
-        complete = true
-        sound.complete(completedLevel === 2)
-        updateCompleteUi()
-        syncQa()
-      },
       onError: showError,
     },
   )
@@ -131,6 +127,16 @@ function renderShell(name: string) {
       </header>
       <div class="lb-register lb-register--left" aria-hidden="true"><i></i><i></i></div>
       <div class="lb-register lb-register--right" aria-hidden="true"><i></i><i></i></div>
+      <section class="lb-route" aria-label="${copy.trace}">
+        <svg class="lb-route__line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path data-route-base pathLength="1"></path>
+          <path data-route-active pathLength="1"></path>
+        </svg>
+        ${[0, 1, 2].map((index) => `
+          <button class="lb-route__node" data-route-node="${index}" type="button" aria-label="${copy.node} ${index + 1}">
+            <span>${index + 1}</span>
+          </button>`).join('')}
+      </section>
       <section class="lb-progress" aria-label="${copy.touch}">
         <div class="lb-progress__pins" aria-hidden="true">
           <i></i><i></i><i></i>
@@ -168,10 +174,14 @@ function renderShell(name: string) {
 }
 
 function bindUi() {
-  const stage = document.querySelector<HTMLElement>('.lb-stage')
+  const route = document.querySelector<HTMLElement>('.lb-route')
   const action = document.querySelector<HTMLButtonElement>('.lb-complete__action')
   const retry = document.querySelector<HTMLButtonElement>('.lb-error button')
-  stage?.addEventListener('pointerdown', stopGhost, { once: true })
+  route?.addEventListener('pointerdown', handleRoutePointerDown)
+  route?.addEventListener('pointermove', handleRoutePointerMove)
+  route?.addEventListener('pointerup', handleRoutePointerUp)
+  route?.addEventListener('pointercancel', handleRoutePointerUp)
+  route?.addEventListener('keydown', handleRouteKeydown)
   action?.addEventListener('pointerdown', handleAction)
   action?.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -181,16 +191,88 @@ function bindUi() {
   })
   retry?.addEventListener('pointerdown', () => location.reload())
   window.addEventListener('keydown', handleKeydown)
+  updateRouteUi()
 }
 
 function handleKeydown(event: KeyboardEvent) {
   if (!director) return
-  if (event.key === 'ArrowLeft') director.rotateByKeyboard(-0.08, 0)
-  if (event.key === 'ArrowRight') director.rotateByKeyboard(0.08, 0)
-  if (event.key === 'ArrowUp') director.rotateByKeyboard(0, -0.06)
-  if (event.key === 'ArrowDown') director.rotateByKeyboard(0, 0.06)
-  if (event.key === 'Enter' && !complete) director.activateNextForKeyboard()
+  if (complete && event.key === 'ArrowLeft') director.rotateByKeyboard(-0.08, 0)
+  if (complete && event.key === 'ArrowRight') director.rotateByKeyboard(0.08, 0)
+  if (complete && event.key === 'ArrowUp') director.rotateByKeyboard(0, -0.06)
+  if (complete && event.key === 'ArrowDown') director.rotateByKeyboard(0, 0.06)
+  if (event.key === 'Enter' && !complete) activateRouteStep()
   if (event.key.toLowerCase() === 'r' && level === 2 && complete) void handleAction()
+}
+
+function handleRoutePointerDown(event: PointerEvent) {
+  if (complete || routePointerId !== null) return
+  stopGhost()
+  routePointerId = event.pointerId
+  const route = event.currentTarget as HTMLElement
+  route.setPointerCapture(event.pointerId)
+  route.classList.add('is-tracing')
+  checkRouteHit(event.clientX, event.clientY)
+}
+
+function handleRoutePointerMove(event: PointerEvent) {
+  if (event.pointerId !== routePointerId || complete) return
+  checkRouteHit(event.clientX, event.clientY)
+}
+
+function handleRoutePointerUp(event: PointerEvent) {
+  if (event.pointerId !== routePointerId) return
+  const route = event.currentTarget as HTMLElement
+  route.classList.remove('is-tracing')
+  if (route.hasPointerCapture(event.pointerId)) route.releasePointerCapture(event.pointerId)
+  routePointerId = null
+}
+
+function handleRouteKeydown(event: KeyboardEvent) {
+  const target = event.target as HTMLElement
+  if (!target.matches('[data-route-node]')) return
+  if ((event.key === 'Enter' || event.key === ' ') && Number(target.dataset.routeNode) === pins) {
+    event.preventDefault()
+    activateRouteStep()
+  }
+}
+
+function checkRouteHit(clientX: number, clientY: number) {
+  const active = document.querySelector<HTMLElement>(`[data-route-node="${pins}"]`)
+  if (!active) return
+  const rect = active.getBoundingClientRect()
+  const forgiveness = 14
+  if (
+    clientX >= rect.left - forgiveness &&
+    clientX <= rect.right + forgiveness &&
+    clientY >= rect.top - forgiveness &&
+    clientY <= rect.bottom + forgiveness
+  ) {
+    activateRouteStep()
+  }
+}
+
+function activateRouteStep() {
+  if (!director || complete || pins >= 3) return
+  stopGhost()
+  sound.pin(pins)
+  pins += 1
+  director.setAssemblyProgress(pins / 3)
+  navigator.vibrate?.(pins === 3 ? [18, 24, 24] : 12)
+  updatePinUi()
+  updateRouteUi()
+  syncQa()
+  if (pins === 3) {
+    complete = true
+    director.setViewMode(true)
+    document.querySelector('.lb-route')?.classList.add('is-complete')
+    updatePinUi()
+    window.clearTimeout(completionTimer)
+    completionTimer = window.setTimeout(() => {
+      sound.complete(level === 2)
+      updateCompleteUi()
+    }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 80 : 520)
+    syncQa()
+  }
 }
 
 async function handleAction() {
@@ -208,6 +290,7 @@ async function handleAction() {
   }
   updateLevelUi()
   updatePinUi()
+  updateRouteUi()
   scheduleGhost()
   syncQa()
 }
@@ -229,7 +312,29 @@ function updatePinUi() {
     pin.classList.toggle('is-active', index < pins)
   })
   const instruction = document.querySelector<HTMLElement>('[data-instruction]')
-  if (instruction) instruction.textContent = `${copy.touch} · ${pins}/3`
+  if (instruction) {
+    instruction.textContent = complete ? copy.view : `${copy.touch} · ${pins}/3`
+  }
+}
+
+function updateRouteUi() {
+  const points = routes[level]
+  const path = points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x} ${y}`).join(' ')
+  document.querySelectorAll<SVGPathElement>('[data-route-base], [data-route-active]').forEach((line) => {
+    line.setAttribute('d', path)
+  })
+  const activeLine = document.querySelector<SVGPathElement>('[data-route-active]')
+  if (activeLine) activeLine.style.strokeDasharray = `${pins / 3} 1`
+  document.querySelectorAll<HTMLElement>('[data-route-node]').forEach((node, index) => {
+    const [x, y] = points[index]
+    node.style.setProperty('--lb-node-x', `${x}%`)
+    node.style.setProperty('--lb-node-y', `${y}%`)
+    node.classList.toggle('is-active', index < pins)
+    node.classList.toggle('is-current', index === pins && !complete)
+    node.setAttribute('aria-current', index === pins && !complete ? 'step' : 'false')
+    node.tabIndex = index === pins && !complete ? 0 : -1
+  })
+  document.querySelector('.lb-route')?.classList.toggle('is-complete', complete)
 }
 
 function updateCompleteUi() {
@@ -249,6 +354,7 @@ function scheduleGhost() {
   if (baseline) return
   ghostTimer = window.setTimeout(() => {
     document.querySelector('.lb-ghost')?.classList.add('is-showing')
+    document.querySelector('.lb-route')?.classList.add('is-previewing')
     director?.setGhostPreview(true)
     ghostEndTimer = window.setTimeout(stopGhost, 2600)
   }, 720)
@@ -258,6 +364,7 @@ function stopGhost() {
   window.clearTimeout(ghostTimer)
   window.clearTimeout(ghostEndTimer)
   document.querySelector('.lb-ghost')?.classList.remove('is-showing')
+  document.querySelector('.lb-route')?.classList.remove('is-previewing')
   director?.setGhostPreview(false)
 }
 
@@ -274,7 +381,7 @@ function syncQa() {
     pins,
     complete,
     identitySource,
-    activateNext: () => director?.activateNextForKeyboard(),
+    activateNext: activateRouteStep,
     goToLevel: async (nextLevel: number) => {
       if (!director) return
       level = Math.max(0, Math.min(2, nextLevel))
@@ -283,6 +390,7 @@ function syncQa() {
       await director.goToLevel(level)
       updateLevelUi()
       updatePinUi()
+      updateRouteUi()
       syncQa()
     },
   }

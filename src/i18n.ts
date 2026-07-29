@@ -11,8 +11,11 @@ const copy = {
     title: '活字世界',
     subtitle: 'LIVING BYLINE',
     level: '投影室',
-    touch: '触碰发光字钉',
-    drag: '拖动空白处 · 长按增强投影',
+    touch: '沿线划过套准点',
+    trace: '署名套准路径',
+    node: '套准点',
+    drag: '依次划过 3 个亮点 · 完成后拖动观看',
+    view: '套准完成 · 拖动观看',
     next: '进入下一投影室',
     replay: '再印一次',
     complete: '署名已经成形',
@@ -27,8 +30,11 @@ const copy = {
     title: 'Living Byline',
     subtitle: 'LIVING BYLINE',
     level: 'CHAMBER',
-    touch: 'Touch the glowing type pins',
-    drag: 'Drag empty space · hold to intensify',
+    touch: 'Trace through the register points',
+    trace: 'Byline registration path',
+    node: 'Register point',
+    drag: 'Trace 3 bright points · drag to view when complete',
+    view: 'Registered · drag to view',
     next: 'Enter next chamber',
     replay: 'Print again',
     complete: 'Your byline is alive',
@@ -44,4 +50,3 @@ const copy = {
 export function t(locale: Locale) {
   return copy[locale]
 }
-
