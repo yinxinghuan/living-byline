@@ -6,17 +6,31 @@ Authoritative `platform-layout` evidence keeps the production guest-shell script
 
 | State | 390×844 | 320×568 |
 |---|---|---|
-| Entry + real ghost interaction | `_qa/ui/visual-rework-entry-platform-layout-390x844.png` | `_qa/ui/visual-rework-entry-platform-layout-320x568.png` |
-| Level 1 complete | `_qa/ui/visual-rework-level1-complete-platform-layout-390x844.png` | `_qa/ui/visual-rework-level1-complete-platform-layout-320x568.png` |
-| Fold Theatre | `_qa/ui/visual-rework-level2-platform-layout-390x844.png` | `_qa/ui/visual-rework-level2-platform-layout-320x568.png` |
-| Fold Theatre complete | `_qa/ui/visual-rework-level2-complete-platform-layout-390x844.png` | `_qa/ui/visual-rework-level2-complete-platform-layout-320x568.png` |
-| Final Orbit Press | `_qa/ui/visual-rework-final-platform-layout-390x844.png` | `_qa/ui/visual-rework-final-platform-layout-320x568.png` |
-| Error / recovery | — | `_qa/ui/visual-rework-error-platform-layout-320x568.png` |
-| External guest shell | `_qa/ui/visual-rework-entry-external-guest-390x844.png` | — |
+| Entry + real ghost interaction | `_qa/ui/flat-print-rework-entry-platform-layout-390x844.png` | `_qa/ui/flat-print-rework-entry-platform-layout-320x568.png` |
+| Level 1 complete | `_qa/ui/flat-print-rework-level1-complete-platform-layout-390x844.png` | `_qa/ui/flat-print-rework-level1-complete-platform-layout-320x568.png` |
+| Fold Theatre | `_qa/ui/flat-print-rework-level2-platform-layout-390x844.png` | `_qa/ui/flat-print-rework-level2-platform-layout-320x568.png` |
+| Fold Theatre complete | `_qa/ui/flat-print-rework-level2-complete-platform-layout-390x844.png` | `_qa/ui/flat-print-rework-level2-complete-platform-layout-320x568.png` |
+| Final flat print | `_qa/ui/flat-print-rework-final-platform-layout-390x844.png` | `_qa/ui/flat-print-rework-final-platform-layout-320x568.png` |
+| Error / recovery | — | `_qa/ui/flat-print-rework-error-platform-layout-320x568.png` |
+| External guest shell | `_qa/ui/flat-print-rework-entry-external-guest-390x844.png` | — |
 
 Poster evidence: `public/poster-source.webp` at 1024×1024 and `_qa/ui/poster-thumbnail-160.png`.
 
 ## First-pass findings and fixes
+
+### P0 — Projector 跟随 viewport，字体发生非均匀拉伸
+
+- **Observation**：DOM 纹理固定为 `1024×1536`，旧实现却在 resize 时写入 `projector.aspect = viewportWidth / viewportHeight`。390×844 的 aspect 约 `0.462`，纹理 aspect 为 `0.667`。
+- **Impact**：整张排版被横向压缩，字体比例和圆环均失真。
+- **Fix**：显示相机继续跟随 viewport；投影相机固定 `24°` 和 `1024/1536` aspect，使 `3.2×4.8` 最终印页完整对应纹理。
+- **Recheck**：QA 在三关完成后断言 `projectorAspect === textureAspect`，容差 `0.0001`；排版中的椭圆保持设计比例，英文粗体不再压扁。
+
+### P1 — 中间态过于简单，完成 target 又不是平面
+
+- **Observation**：清理穿插后，三关只剩少量竖板；折页 target 保留旋转和 Z 深度，轨道关 target 仍是带环的立体模型。完成面板出现时 alignment 仍在渐近收敛，残留折角与暗角。
+- **Impact**：3D 过程缺少空间变化，最终结果又没有兑现“碎片拼成一张印页”的玩法承诺。
+- **Fix**：门廊使用六片纸页与三层透视框；折页使用八片 `±0.5 rad` 手风琴和双导轨；轨道使用十二块 `3×4` 纸片与三重空间轨道。所有文字片 target 统一为 `3.2×4.8`、`Z=0.2`、零旋转，装饰按 alignment 退场。完成阶段关闭 vignette，投影纸面不乘法线光照。
+- **Recheck**：每关完成后机械断言 `maxRotation ≤ 0.025`、`depthSpread ≤ 0.025`；实际最终锁定为零。两档截图中完成印页无折痕、模型阴影或残留轨道，中间态仍有明确纵深。
 
 ### P0 — 高频扫描线与错误纹理方向破坏了最终画面
 
@@ -65,7 +79,7 @@ Poster evidence: `public/poster-source.webp` at 1024×1024 and `_qa/ui/poster-th
 ## Interaction and resilience checks
 
 - 两档手机均通过一根真实连续 touch 轨迹穿过三枚套准点，不用键盘或 QA hook 捷径。
-- 装配时路径独占 pointer，不会误转相机；完成后单指拖动画面前后 Canvas 像素不同。
+- 装配时路径独占 pointer；完成后相机保持固定正面，避免把已经锁平的印页再次倾斜。
 - 平台 bridge 模拟返回 18 字符长用户名与不同来源、无 CORS 的头像 URL；画面身份来源断言为 `player`，且没有把头像错误送入 Canvas。
 - 无横向溢出。
 - 纯 DOM 错误态在 320×568 可读，Retry 为 48px 高。
@@ -78,11 +92,11 @@ Poster evidence: `public/poster-source.webp` at 1024×1024 and `_qa/ui/poster-th
 | Category | Score / 5 | Evidence |
 |---|---:|---|
 | Hierarchy | 4.4 | 用户名、场景主体、三枚字钉和进度按顺序读取 |
-| Coherence | 4.7 | 三关共享干净纸面与正面投影合同，同时保持门、折页、轨道剪影 |
-| Readability | 4.7 | CJK/长用户名正向直立；无扫描纹、镜像字、倒字或背面文字 |
+| Coherence | 4.8 | 三种复杂空间中间态共享同一个平面印刷终点 |
+| Readability | 4.9 | CJK/长用户名正向直立、无非均匀拉伸、无完成态阴影 |
 | Game feel | 4.6 | 连续划动、同帧节点压入/路径填充/几何套准、输入模式严格分离 |
-| Asset quality | 4.7 | 原创程序几何被收束为可读编辑雕塑；折页与轨道无随机穿插 |
+| Asset quality | 4.8 | 门廊框、手风琴导轨和三重轨道提供关卡专属 3D 轮廓并按玩法退场 |
 | Responsive UX | 4.4 | 390×844、320×568、safe-area 与 external guest 双态 |
-| Polish | 4.6 | 完成、错误、重玩、正面裁切与 reduced-motion 均有明确定义 |
+| Polish | 4.8 | 完成平面有 aspect、旋转、深度三项机械断言；错误、重玩和 reduced-motion 完整 |
 
-平均分 `4.59/5`，无类别低于 3。2026-07-30 实机截图暴露的扫描线、反字和几何穿插 P0/P1 已通过匹配状态复拍关闭；可玩性复审与首轮 P2 继续保持关闭。
+平均分 `4.67/5`，无类别低于 3。2026-07-30 进一步暴露的字体拉伸、3D 中间态过简和完成态不共面问题已通过运行断言与匹配截图关闭。

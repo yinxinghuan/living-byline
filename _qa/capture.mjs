@@ -4,7 +4,7 @@ import { chromium } from '/Users/yin/.cache/codex-runtimes/codex-primary-runtime
 
 const root = '/Users/yin/code/games/living-byline'
 const port = '61289'
-const evidenceRound = 'visual-rework'
+const evidenceRound = 'flat-print-rework'
 const vite = `${root}/node_modules/vite/bin/vite.js`
 const server = spawn(process.execPath, [vite, '--host', '127.0.0.1', '--port', port], {
   cwd: root,
@@ -45,6 +45,25 @@ async function traceRoute(page) {
   }
   await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   await client.detach()
+}
+
+async function assertFlatPrint(page, label, stage) {
+  const debug = await page.evaluate(() => window.__livingByline?.debug())
+  if (!debug) {
+    failures.push(`${label} ${stage}: missing projection debug state`)
+    return
+  }
+  if (Math.abs(debug.projectorAspect - debug.textureAspect) > 0.0001) {
+    failures.push(
+      `${label} ${stage}: projector aspect ${debug.projectorAspect} != texture ${debug.textureAspect}`,
+    )
+  }
+  if (debug.maxRotation > 0.025) {
+    failures.push(`${label} ${stage}: completed page rotation ${debug.maxRotation}`)
+  }
+  if (debug.depthSpread > 0.025) {
+    failures.push(`${label} ${stage}: completed page depth spread ${debug.depthSpread}`)
+  }
 }
 
 for (const [label, width, height] of [
@@ -116,6 +135,8 @@ for (const [label, width, height] of [
 
   await traceRoute(page)
   await page.waitForFunction(() => window.__livingByline?.complete === true)
+  await page.waitForTimeout(900)
+  await assertFlatPrint(page, label, 'level1')
   await page.screenshot({
     path: `${root}/_qa/ui/${evidenceRound}-level1-complete-platform-layout-${label}.png`,
   })
@@ -130,26 +151,21 @@ for (const [label, width, height] of [
   await traceRoute(page)
   await page.waitForFunction(() => window.__livingByline?.complete === true)
   await page.waitForTimeout(900)
+  await assertFlatPrint(page, label, 'level2')
   await page.screenshot({
     path: `${root}/_qa/ui/${evidenceRound}-level2-complete-platform-layout-${label}.png`,
   })
   await page.locator('.lb-complete__action').click()
   await page.waitForFunction(() => window.__livingByline?.level === 2)
   await page.waitForTimeout(900)
+  await page.screenshot({
+    path: `${root}/_qa/ui/${evidenceRound}-level3-platform-layout-${label}.png`,
+  })
 
   await traceRoute(page)
   await page.waitForFunction(() => window.__livingByline?.complete === true)
   await page.waitForTimeout(900)
-  const beforeDrag = await page.locator('canvas').screenshot()
-  await page.mouse.move(width * 0.22, height * 0.52)
-  await page.mouse.down()
-  await page.mouse.move(width * 0.75, height * 0.43, { steps: 8 })
-  await page.mouse.up()
-  await page.waitForTimeout(320)
-  const afterDrag = await page.locator('canvas').screenshot()
-  if (Buffer.compare(beforeDrag, afterDrag) === 0) {
-    failures.push(`${label}: completed canvas did not change after drag`)
-  }
+  await assertFlatPrint(page, label, 'level3')
   await page.screenshot({
     path: `${root}/_qa/ui/${evidenceRound}-final-platform-layout-${label}.png`,
   })

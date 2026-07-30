@@ -16,6 +16,16 @@ type PieceState = {
   scatterRotation: THREE.Euler
 }
 
+type DecorationState = {
+  opacity: number
+  scale: THREE.Vector3
+}
+
+const PAGE_WIDTH = 3.2
+const PAGE_HEIGHT = 4.8
+const PAGE_ASPECT = PAGE_WIDTH / PAGE_HEIGHT
+const PAGE_Z = 0.2
+
 export class SceneDirector {
   private readonly container: HTMLElement
   private readonly events: DirectorEvents
@@ -23,29 +33,22 @@ export class SceneDirector {
   private readonly renderer: THREE.WebGLRenderer
   private readonly scene = new THREE.Scene()
   private readonly camera = new THREE.PerspectiveCamera(42, 1, 0.1, 80)
-  private readonly projector = new THREE.PerspectiveCamera(39, 1, 0.1, 40)
+  private readonly projector = new THREE.PerspectiveCamera(24, PAGE_ASPECT, 0.1, 40)
   private readonly clock = new THREE.Clock()
   private readonly projectedMaterial: THREE.ShaderMaterial
   private readonly projectionUniforms: ProjectionUniforms
   private readonly root = new THREE.Group()
   private readonly pieces: THREE.Object3D[] = []
+  private readonly decorations: THREE.Object3D[] = []
   private readonly reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
   private progress = 0
   private alignment = 0
-  private targetYaw = 0
-  private yaw = 0
-  private targetPitch = -0.05
-  private pitch = -0.05
   private ghostPreview = false
   private running = true
   private inViewport = true
   private frame = 0
-  private pointerId: number | null = null
-  private pointerStart = new THREE.Vector2()
-  private pointerPrevious = new THREE.Vector2()
   private transition = 1
   private transitionTarget = 1
-  private viewMode = false
   private impact = 0
   private resizeObserver: ResizeObserver
   private intersectionObserver: IntersectionObserver
@@ -77,7 +80,6 @@ export class SceneDirector {
     this.scene.add(this.root)
     this.setupLights()
     this.setupCamera()
-    this.setupEvents()
 
     this.resizeObserver = new ResizeObserver(() => this.resize())
     this.resizeObserver.observe(this.container)
@@ -110,10 +112,7 @@ export class SceneDirector {
     await delay(this.reducedMotion ? 80 : 430)
     this.progress = 0
     this.alignment = 0
-    this.viewMode = false
     this.impact = 0
-    this.targetYaw = this.yaw = 0
-    this.targetPitch = this.pitch = -0.05
     await this.identityTexture.render(level)
     this.buildLevel(level)
     this.transition = 0
@@ -133,13 +132,17 @@ export class SceneDirector {
     this.impact = 1
   }
 
-  setViewMode(active: boolean) {
-    this.viewMode = active
-  }
-
-  rotateByKeyboard(x: number, y: number) {
-    this.targetYaw = THREE.MathUtils.clamp(this.targetYaw + x, -0.62, 0.62)
-    this.targetPitch = THREE.MathUtils.clamp(this.targetPitch + y, -0.28, 0.24)
+  getDebugState() {
+    const rotations = this.pieces.map((piece) =>
+      Math.max(Math.abs(piece.rotation.x), Math.abs(piece.rotation.y), Math.abs(piece.rotation.z)),
+    )
+    const depths = this.pieces.map((piece) => piece.position.z)
+    return {
+      maxRotation: Math.max(0, ...rotations),
+      depthSpread: depths.length ? Math.max(...depths) - Math.min(...depths) : 0,
+      projectorAspect: this.projector.aspect,
+      textureAspect: this.identityTexture.canvas.width / this.identityTexture.canvas.height,
+    }
   }
 
   private setupLights() {
@@ -160,43 +163,6 @@ export class SceneDirector {
     this.projector.updateMatrixWorld()
   }
 
-  private setupEvents() {
-    const canvas = this.renderer.domElement
-    canvas.addEventListener('pointerdown', this.onPointerDown)
-    canvas.addEventListener('pointermove', this.onPointerMove)
-    canvas.addEventListener('pointerup', this.onPointerUp)
-    canvas.addEventListener('pointercancel', this.onPointerUp)
-  }
-
-  private onPointerDown = (event: PointerEvent) => {
-    if (!this.viewMode) return
-    if (this.pointerId !== null) return
-    this.pointerId = event.pointerId
-    this.pointerStart.set(event.clientX, event.clientY)
-    this.pointerPrevious.copy(this.pointerStart)
-    this.renderer.domElement.setPointerCapture(event.pointerId)
-  }
-
-  private onPointerMove = (event: PointerEvent) => {
-    if (event.pointerId !== this.pointerId) return
-    const current = new THREE.Vector2(event.clientX, event.clientY)
-    const distance = current.distanceTo(this.pointerStart)
-    if (distance > 8) {
-      const delta = current.clone().sub(this.pointerPrevious)
-      this.targetYaw = THREE.MathUtils.clamp(this.targetYaw - delta.x * 0.006, -0.62, 0.62)
-      this.targetPitch = THREE.MathUtils.clamp(this.targetPitch - delta.y * 0.004, -0.28, 0.24)
-    }
-    this.pointerPrevious.copy(current)
-  }
-
-  private onPointerUp = (event: PointerEvent) => {
-    if (event.pointerId !== this.pointerId) return
-    this.pointerId = null
-    if (this.renderer.domElement.hasPointerCapture(event.pointerId)) {
-      this.renderer.domElement.releasePointerCapture(event.pointerId)
-    }
-  }
-
   private buildLevel(level: number) {
     this.clearRoot()
     this.projectionUniforms.accent.value.set(level === 1 ? '#4d7cff' : '#ff5b4d')
@@ -207,63 +173,109 @@ export class SceneDirector {
   }
 
   private buildThreshold() {
-    for (let index = 0; index < 5; index += 1) {
-      const offset = index - 2
-      this.addPiece(
-        new THREE.BoxGeometry(0.68, 4.75 - Math.abs(offset) * 0.12, 0.13),
-        [offset * 0.64, -0.05, 0.22 - Math.abs(offset) * 0.08],
-        [0, offset * -0.035, 0],
-        index,
-      )
-    }
-    this.addPiece(new THREE.BoxGeometry(3.4, 0.16, 0.18), [0, 2.43, 0], [0, 0, 0], 6)
-    this.addPiece(new THREE.BoxGeometry(3.4, 0.12, 0.18), [0, -2.47, 0], [0, 0, 0], 7)
+    this.buildVerticalPage(6, (index, targetX) => {
+      const offset = index - 2.5
+      return {
+        position: [
+          targetX + Math.sin(index * 1.7) * 0.12,
+          (index % 2 ? 1 : -1) * 0.18,
+          PAGE_Z + 0.3 + Math.abs(offset) * 0.34,
+        ],
+        rotation: [0, -offset * 0.16, (index % 2 ? 1 : -1) * 0.045],
+      }
+    })
+    this.addFrame(3.72, 5.28, -0.62, '#ff5b4d', [0.02, 0.06, -0.025])
+    this.addFrame(4.05, 5.58, -1.08, '#4d7cff', [-0.03, -0.08, 0.035])
+    this.addFrame(4.34, 5.86, -1.5, '#f3f0e8', [0.04, 0.11, -0.045])
   }
 
   private buildFoldTheatre() {
-    for (let index = 0; index < 7; index += 1) {
-      const offset = index - 3
+    this.buildVerticalPage(8, (index, targetX) => {
       const fold = index % 2 === 0 ? -1 : 1
-      this.addPiece(
-        new THREE.BoxGeometry(0.52, 4.8, 0.1),
-        [offset * 0.49, -0.04, 0.2 - Math.abs(offset) * 0.055],
-        [0, fold * 0.16, 0],
-        index,
-      )
-    }
-    this.addPiece(new THREE.BoxGeometry(3.55, 0.16, 0.2), [0, -2.5, -0.02], [0, 0, 0], 8)
+      return {
+        position: [
+          targetX,
+          Math.cos(index * 1.4) * 0.12,
+          PAGE_Z + 0.2 + Math.abs(index - 3.5) * 0.13,
+        ],
+        rotation: [0.025 * fold, 0.5 * fold, 0.025 * fold],
+      }
+    })
+    this.addArc(1.95, 0.055, -0.8, '#4d7cff', [1.18, 0.1, 0.18])
+    this.addArc(2.22, 0.045, -1.08, '#ff5b4d', [0.5, 0.28, 1.05])
   }
 
   private buildOrbitPress() {
-    this.addPiece(new THREE.BoxGeometry(3.15, 4.65, 0.12), [0, -0.02, 0.35], [0, 0, 0], 0)
-    this.addPiece(new THREE.TorusGeometry(1.72, 0.075, 16, 96), [0, 0.05, -0.5], [0.88, 0.16, 0.18], 1)
-    this.addPiece(new THREE.TorusGeometry(2.02, 0.055, 14, 96), [0, 0.05, -0.62], [0.28, 0.38, 1.08], 2)
-    this.addPiece(new THREE.SphereGeometry(0.34, 32, 24), [1.2, 1.42, 0.74], [0, 0, 0], 3)
+    const columns = 3
+    const rows = 4
+    const tileWidth = PAGE_WIDTH / columns
+    const tileHeight = PAGE_HEIGHT / rows
+    for (let row = 0; row < rows; row += 1) {
+      for (let column = 0; column < columns; column += 1) {
+        const index = row * columns + column
+        const angle = index / (columns * rows) * Math.PI * 2 - Math.PI / 2
+        const targetX = -PAGE_WIDTH / 2 + tileWidth / 2 + column * tileWidth
+        const targetY = PAGE_HEIGHT / 2 - tileHeight / 2 - row * tileHeight
+        this.addPiece(
+          new THREE.PlaneGeometry(tileWidth + 0.008, tileHeight + 0.008),
+          [targetX, targetY, PAGE_Z],
+          [0, 0, 0],
+          {
+            position: [
+              Math.cos(angle) * (1.65 + row * 0.12),
+              Math.sin(angle) * (2.05 + column * 0.08),
+              PAGE_Z + 0.6 + Math.sin(angle * 2) * 0.72,
+            ],
+            rotation: [
+              Math.sin(angle) * 0.28,
+              Math.cos(angle) * 0.62,
+              angle + Math.PI / 2,
+            ],
+          },
+        )
+      }
+    }
+    this.addArc(1.82, 0.065, -0.72, '#ff5b4d', [0.9, 0.16, 0.18])
+    this.addArc(2.18, 0.045, -1.12, '#4d7cff', [0.3, 0.38, 1.08])
+    this.addArc(2.48, 0.035, -1.46, '#f3f0e8', [1.34, -0.18, 0.52])
+  }
+
+  private buildVerticalPage(
+    count: number,
+    scatterFor: (
+      index: number,
+      targetX: number,
+    ) => {
+      position: [number, number, number]
+      rotation: [number, number, number]
+    },
+  ) {
+    const pieceWidth = PAGE_WIDTH / count
+    for (let index = 0; index < count; index += 1) {
+      const targetX = -PAGE_WIDTH / 2 + pieceWidth / 2 + index * pieceWidth
+      this.addPiece(
+        new THREE.PlaneGeometry(pieceWidth + 0.008, PAGE_HEIGHT + 0.008),
+        [targetX, 0, PAGE_Z],
+        [0, 0, 0],
+        scatterFor(index, targetX),
+      )
+    }
   }
 
   private addPiece(
     geometry: THREE.BufferGeometry,
     position: [number, number, number],
     rotation: [number, number, number],
-    seed: number,
+    scatter: {
+      position: [number, number, number]
+      rotation: [number, number, number]
+    },
   ) {
     const mesh = new THREE.Mesh(geometry, this.projectedMaterial)
     const targetPosition = new THREE.Vector3(...position)
     const targetRotation = new THREE.Euler(...rotation)
-    const scatterPosition = targetPosition
-      .clone()
-      .add(
-        new THREE.Vector3(
-          Math.sin(seed * 4.7 + 0.4) * 0.28,
-          Math.cos(seed * 2.9 + 0.8) * 0.22,
-          Math.sin(seed * 3.2) * 0.34,
-        ),
-      )
-    const scatterRotation = new THREE.Euler(
-      rotation[0] + Math.sin(seed * 2.3) * 0.12,
-      rotation[1] + Math.cos(seed * 1.7) * 0.16,
-      rotation[2] + Math.sin(seed * 4.1) * 0.08,
-    )
+    const scatterPosition = new THREE.Vector3(...scatter.position)
+    const scatterRotation = new THREE.Euler(...scatter.rotation)
     mesh.userData.piece = {
       targetPosition,
       targetRotation,
@@ -274,6 +286,54 @@ export class SceneDirector {
     mesh.rotation.copy(scatterRotation)
     this.root.add(mesh)
     this.pieces.push(mesh)
+  }
+
+  private addFrame(
+    width: number,
+    height: number,
+    z: number,
+    color: THREE.ColorRepresentation,
+    rotation: [number, number, number],
+  ) {
+    const source = new THREE.BoxGeometry(width, height, 0.04)
+    const edges = new THREE.EdgesGeometry(source)
+    source.dispose()
+    const material = new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.58,
+    })
+    const frame = new THREE.LineSegments(edges, material)
+    frame.position.z = z
+    frame.rotation.set(...rotation)
+    this.addDecoration(frame, material.opacity)
+  }
+
+  private addArc(
+    radius: number,
+    tube: number,
+    z: number,
+    color: THREE.ColorRepresentation,
+    rotation: [number, number, number],
+  ) {
+    const material = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.52,
+    })
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 12, 96), material)
+    arc.position.z = z
+    arc.rotation.set(...rotation)
+    this.addDecoration(arc, material.opacity)
+  }
+
+  private addDecoration(object: THREE.Object3D, opacity: number) {
+    object.userData.decoration = {
+      opacity,
+      scale: object.scale.clone(),
+    } satisfies DecorationState
+    this.root.add(object)
+    this.decorations.push(object)
   }
 
   private buildGround(level: number) {
@@ -293,7 +353,7 @@ export class SceneDirector {
   private clearRoot() {
     for (const child of [...this.root.children]) {
       child.traverse((object) => {
-        if (object instanceof THREE.Mesh) {
+        if (object instanceof THREE.Mesh || object instanceof THREE.LineSegments) {
           object.geometry.dispose()
           const materials = Array.isArray(object.material) ? object.material : [object.material]
           materials.forEach((material) => {
@@ -304,6 +364,7 @@ export class SceneDirector {
       this.root.remove(child)
     }
     this.pieces.length = 0
+    this.decorations.length = 0
   }
 
   private resize() {
@@ -312,7 +373,7 @@ export class SceneDirector {
     this.renderer.setSize(width, height, false)
     this.camera.aspect = width / height
     this.camera.updateProjectionMatrix()
-    this.projector.aspect = width / height
+    this.projector.aspect = PAGE_ASPECT
     this.projector.updateProjectionMatrix()
     this.projector.updateMatrixWorld()
     this.projectionUniforms.projectorProjection.value.copy(this.projector.projectionMatrix)
@@ -340,27 +401,18 @@ export class SceneDirector {
   private tick = () => {
     this.frame = 0
     const elapsed = this.clock.getElapsedTime()
-    const damping = this.reducedMotion ? 1 : 0.08
-    this.yaw = THREE.MathUtils.lerp(this.yaw, this.targetYaw, damping)
-    this.pitch = THREE.MathUtils.lerp(this.pitch, this.targetPitch, damping)
     this.impact = THREE.MathUtils.lerp(this.impact, 0, this.reducedMotion ? 1 : 0.12)
-    this.alignment = THREE.MathUtils.lerp(
-      this.alignment,
-      this.progress,
-      this.reducedMotion ? 1 : 0.055,
-    )
+    const alignmentDamping = this.reducedMotion ? 1 : this.progress >= 1 ? 0.16 : 0.075
+    this.alignment = THREE.MathUtils.lerp(this.alignment, this.progress, alignmentDamping)
+    if (this.progress >= 1 && this.alignment > 0.995) this.alignment = 1
     this.transition = THREE.MathUtils.lerp(
       this.transition,
       this.transitionTarget,
       this.reducedMotion ? 1 : 0.07,
     )
 
-    this.camera.position.set(
-      Math.sin(this.yaw) * 7.2,
-      0.15 + Math.sin(this.pitch) * 5.2,
-      Math.cos(this.yaw) * 7.2 + 3,
-    )
-    this.camera.lookAt(0, -0.05, 0)
+    this.camera.position.set(0, 0.1, 10.2)
+    this.camera.lookAt(0, 0, PAGE_Z)
 
     const ghostWave = this.ghostPreview ? Math.max(0, Math.sin(elapsed * 3.4)) : 0
     this.projectionUniforms.reveal.value = 0.16 + this.alignment * 0.84
@@ -375,6 +427,20 @@ export class SceneDirector {
         THREE.MathUtils.lerp(state.scatterRotation.y, state.targetRotation.y, easeOut(this.alignment)),
         THREE.MathUtils.lerp(state.scatterRotation.z, state.targetRotation.z, easeOut(this.alignment)),
       )
+    }
+
+    const decorVisibility = 1 - easeOut(this.alignment)
+    for (const decoration of this.decorations) {
+      const state = decoration.userData.decoration as DecorationState
+      decoration.visible = decorVisibility > 0.015
+      decoration.scale.copy(state.scale).multiplyScalar(0.72 + decorVisibility * 0.28)
+      const material = decoration instanceof THREE.LineSegments
+        ? decoration.material
+        : (decoration as THREE.Mesh).material
+      const materials = Array.isArray(material) ? material : [material]
+      materials.forEach((entry) => {
+        entry.opacity = state.opacity * decorVisibility
+      })
     }
 
     this.root.scale.setScalar(0.92 + this.transition * 0.08 + this.impact * 0.018)
@@ -392,11 +458,6 @@ export class SceneDirector {
     this.resizeObserver.disconnect()
     this.intersectionObserver.disconnect()
     document.removeEventListener('visibilitychange', this.onVisibility)
-    const canvas = this.renderer.domElement
-    canvas.removeEventListener('pointerdown', this.onPointerDown)
-    canvas.removeEventListener('pointermove', this.onPointerMove)
-    canvas.removeEventListener('pointerup', this.onPointerUp)
-    canvas.removeEventListener('pointercancel', this.onPointerUp)
     this.clearRoot()
     this.identityTexture.dispose()
     this.projectedMaterial.dispose()

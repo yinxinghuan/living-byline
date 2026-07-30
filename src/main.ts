@@ -26,6 +26,12 @@ declare global {
       identitySource: 'query' | 'player' | 'brand'
       activateNext: () => void
       goToLevel: (level: number) => Promise<void>
+      debug: () => {
+        maxRotation: number
+        depthSpread: number
+        projectorAspect: number
+        textureAspect: number
+      } | undefined
     }
   }
 }
@@ -196,10 +202,6 @@ function bindUi() {
 
 function handleKeydown(event: KeyboardEvent) {
   if (!director) return
-  if (complete && event.key === 'ArrowLeft') director.rotateByKeyboard(-0.08, 0)
-  if (complete && event.key === 'ArrowRight') director.rotateByKeyboard(0.08, 0)
-  if (complete && event.key === 'ArrowUp') director.rotateByKeyboard(0, -0.06)
-  if (complete && event.key === 'ArrowDown') director.rotateByKeyboard(0, 0.06)
   if (event.key === 'Enter' && !complete) activateRouteStep()
   if (event.key.toLowerCase() === 'r' && level === 2 && complete) void handleAction()
 }
@@ -263,7 +265,7 @@ function activateRouteStep() {
   syncQa()
   if (pins === 3) {
     complete = true
-    director.setViewMode(true)
+    document.querySelector('.lb-game')?.classList.add('is-complete')
     document.querySelector('.lb-route')?.classList.add('is-complete')
     updatePinUi()
     window.clearTimeout(completionTimer)
@@ -280,6 +282,7 @@ async function handleAction() {
   const panel = document.querySelector<HTMLElement>('.lb-complete')
   panel?.setAttribute('hidden', '')
   complete = false
+  document.querySelector('.lb-game')?.classList.remove('is-complete')
   pins = 0
   if (level < 2) {
     level += 1
@@ -382,11 +385,13 @@ function syncQa() {
     complete,
     identitySource,
     activateNext: activateRouteStep,
+    debug: () => director?.getDebugState(),
     goToLevel: async (nextLevel: number) => {
       if (!director) return
       level = Math.max(0, Math.min(2, nextLevel))
       pins = 0
       complete = false
+      document.querySelector('.lb-game')?.classList.remove('is-complete')
       await director.goToLevel(level)
       updateLevelUi()
       updatePinUi()

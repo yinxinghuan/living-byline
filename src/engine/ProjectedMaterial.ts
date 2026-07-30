@@ -66,10 +66,11 @@ export function createProjectionMaterial(
         float edge = pow(1.0 - abs(dot(normalize(vNormalWorld), normalize(cameraPosition - vWorld))), 2.2);
         vec3 base = vec3(${color.r.toFixed(4)}, ${color.g.toFixed(4)}, ${color.b.toFixed(4)});
         float projection = inside * facing * (0.08 + reveal * 0.92);
-        vec3 ink = mix(base, page.rgb, projection);
-        ink += accent * edge * (0.07 + boost * 0.12);
         float light = 0.62 + max(dot(normalize(vNormalWorld), normalize(vec3(-0.4, 0.8, 0.65))), 0.0) * 0.42;
-        gl_FragColor = vec4(ink * light, 1.0);
+        vec3 shadedBase = base * light;
+        shadedBase += accent * edge * (0.07 + boost * 0.12);
+        vec3 ink = mix(shadedBase, page.rgb, projection);
+        gl_FragColor = vec4(ink, 1.0);
       }
     `,
   })

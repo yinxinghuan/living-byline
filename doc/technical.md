@@ -18,12 +18,12 @@
 - `src/audio.ts`：字钉、关卡完成与终局合成音。
 - `src/engine/IdentityTexture.ts`：用户名与 `ALTERU` 的 HTML→SVG→Canvas 纹理生成及回退。
 - `src/engine/ProjectedMaterial.ts`：世界空间投影坐标、CanvasTexture 方向、投影机正面裁切、边缘光与触点冲击 shader。
-- `src/engine/SceneDirector.ts`：Three.js 生命周期、三个程序场景、装配进度、完成后相机拖动、离屏暂停与资源释放。
+- `src/engine/SceneDirector.ts`：Three.js 生命周期、三个程序化 3D 中间态、平面 target、装饰退场、离屏暂停与资源释放。
 - `src/shared/runtime/bridge.ts`：canonical Aigram 平台桥。
 - `public/poster-source.webp`：Aigram transit 生成的 1024×1024 raster 海报源。
 - `public/poster.png`：发布海报。
 - `public/THIRD_PARTY_NOTICES.txt`：Three.js MIT 完整 notice。
-- `_qa/capture.mjs`：双尺寸、平台身份、连续 CDP touch 路径、完成后拖动、错误态与 external guest 自动验证。
+- `_qa/capture.mjs`：双尺寸、平台身份、连续 CDP touch 路径、完成态共面/零旋转/aspect 断言、错误态与 external guest 自动验证。
 
 ## 3. 核心模块
 
@@ -35,21 +35,21 @@
 
 `IdentityTexture.render(level)` 为每个场景生成不同排版。输入仅包含转义后的玩家名和固定平台名，不包含跨域照片，因此 SVG `foreignObject` 不需要读取外部资源。纹理尺寸固定为 `1024×1536`，CanvasTexture 使用 sRGB 与线性过滤。
 
-`ProjectedMaterial` 接收独立投影相机的 projection/view matrix 与世界坐标位置，把世界坐标转换成纹理 UV。CanvasTexture 已按 DOM 图像约定上传，因此 shader 不再二次翻转 Y。采样强度乘以表面法线朝向投影机的 facing mask：正面显示排版，侧面和背面回退到深色基础材质，避免镜像字和倒字。材质保留揭示比例、短促触点法线位移与边缘色，不使用高频扫描线。
+`ProjectedMaterial` 接收独立投影相机的 projection/view matrix 与世界坐标位置，把世界坐标转换成纹理 UV。投影相机固定 `24°` 和 `1024/1536` aspect；显示相机独立跟随 viewport，因此字体与圆形不会随手机比例非均匀缩放。CanvasTexture 已按 DOM 图像约定上传，shader 不二次翻转 Y。采样强度乘以表面法线朝向投影机的 facing mask，且纸面颜色不乘法线光照；正面显示原始排版，侧面和背面回退到深色基础材质。
 
 ### 三个场景与闭环
 
-- 门廊：五片等宽纵向印版和上下套准梁，完成后成为一张连续门形海报。
-- 折页剧场：七片不重叠竖向手风琴折页与窄底座，折痕提供空间深度但不遮挡排版。
-- 轨道印刷机：一张正面编辑印版、位于后方的双细环和一个小型轨道标点，完成视角优先保证署名可读。
+- 门廊：六片纸页从三层透视套准框中的不同 Z 深度收拢。
+- 折页剧场：八片纸页从交替 `±0.5 rad` 的手风琴折叠完全展开，双弧形导轨同步退场。
+- 轨道印刷机：十二块 `3×4` 纸页碎片从三维椭圆轨道收拢，三个空间轨道同步退场。
 
-每个场景的几何保存 target/scatter 两套位置和旋转；三个屏幕空间套准点通过 `setAssemblyProgress()` 把 `alignment` 从 `0` 推进到 `1`，所有物体按同一时间连续插值到套准状态。终局保留 RAF 与相机拖动，但不产生新对象或累积特效。
+每个文字片保存 target/scatter 两套位置和旋转。scatter 是关卡专属 3D 构图；target 一律位于 `3.2×4.8`、`Z=0.2` 的平面且旋转为零。第三点后 alignment 使用 `0.16` 阻尼并在 `>0.995` 时精确锁到 `1`，避免完成面板出现时仍残留折角和阴影。装饰对象按 `1 - alignment` 淡出并缩小。
 
 ### 输入与反馈
 
 装配阶段由覆盖画布的 `.lb-route` 使用 Pointer Events 和 pointer capture 接管输入。三条路径以百分比坐标配置；每个节点直径 `68px`（窄屏 `62px`），命中检测额外外扩 `14px`。手指进入当前节点时立即推进，继续移动可在同一次手势中穿过后续节点；也可逐点轻触。
 
-第三个节点完成后 `.lb-route` 淡出并关闭 pointer events，`SceneDirector.setViewMode(true)` 才允许 Canvas 接收相机拖动。装配和观看不存在轻触/拖动阈值竞争。键盘 Enter 推进当前节点，方向键只在完成状态旋转。
+第三个节点完成后 `.lb-route` 淡出并关闭 pointer events，Canvas 保持固定正面构图，不再开放拖动倾斜。键盘 Enter 推进当前节点，终局 `R` 重开。
 
 幽灵手是 Material `touch_app` 图形；沿第一关三点路径移动。出现时 `.lb-route.is-previewing` 与 `SceneDirector.setGhostPreview(true)` 会真实提升当前节点呼吸和投影扫描，不推进进度。
 
@@ -66,7 +66,7 @@ renderer DPR 在窄屏限制为 `1.3`，其他手机最多 `1.7`；几何总量�
 ## 4. 扩展点
 
 - **增加关卡**：在 `SceneDirector.buildLevel()` 注册新的原创几何构建器，并在 `i18n.ts` 增加关卡名与印章。
-- **调整玩法数值**：在 `main.ts` 修改 `routes` 坐标、`14px` 命中宽容与完成延迟；在 `SceneDirector` 修改完成后相机角度限制；在 `requirements.md` 同步。
+- **调整玩法数值**：在 `main.ts` 修改 `routes` 坐标、`14px` 命中宽容与完成延迟；在 `SceneDirector` 修改各关 scatter、alignment 阻尼和装饰退场；在 `requirements.md` 同步。
 - **改变排版与平台短句**：编辑 `IdentityTexture.markup()`；不要加入无 CORS 的外部图片或 Web Font。
 - **改变 shader**：编辑 `ProjectedMaterial.ts` 的世界投影、扫描、边缘光和位移；保持 projector matrix/UV 合同。
 - **改变 UI / 响应式**：编辑 `style.css`；`platform-layout` 构图必须继续按无访客栏状态验收。

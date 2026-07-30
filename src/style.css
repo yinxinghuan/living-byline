@@ -62,11 +62,7 @@ button {
 .lb-stage__canvas {
   display: block;
   outline: none;
-  cursor: grab;
-}
-
-.lb-stage__canvas:active {
-  cursor: grabbing;
+  cursor: default;
 }
 
 .lb-vignette {
@@ -77,6 +73,11 @@ button {
   background:
     linear-gradient(180deg, rgba(7, 9, 13, 0.76) 0%, transparent 18%, transparent 73%, rgba(7, 9, 13, 0.82) 100%),
     radial-gradient(circle at center, transparent 56%, rgba(7, 9, 13, 0.5) 100%);
+  transition: opacity 0.32s ease;
+}
+
+.lb-game.is-complete .lb-vignette {
+  opacity: 0;
 }
 
 .lb-hud {
