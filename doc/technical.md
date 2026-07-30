@@ -31,7 +31,9 @@
 
 纹理固定为 `1024×1536`，DOM 页面由刊头、双色 hero、用户名、期号、编辑标题、双栏正文、色卡与页脚组成。shader 不翻转 Y；过程态用 facing mask 表现侧面，`resolve` 在对齐度 `0.72–0.98` 间把可见表面恢复为同一页面像素。
 
-三关共同使用 48 个 ExtrudeGeometry 三角体覆盖 `3.3×4.95` 页面区域；每片根据深度按 `(11.5-z)/11.5` 做透视缩放，并以 3.5% 质心外扩消除子像素缝。三关深度场约为 `±1.62 / ±1.86 / ±2.05`，再叠加 Sphere/Torus/Cylinder/Cone/多面体。
+`splitMosaicRect()` 以关卡种子执行 2–5 层非对称 BSP 分割，长宽比会影响切分方向，停止概率随深度从 `0.18` 升到 `0.72`。部分区域再沿对角线拆分，最终形成 `12–36` 个面积跨度至少 `8:1` 的 ExtrudeGeometry。
+
+每片根据深度按 `(11.5-z)/11.5` 做透视缩放，并以 3.5% 质心外扩消除子像素缝。深度不是连续函数：约 58% 的普通片聚集到 `|Z|<0.41`，中距片落在约 `0.72–1.68`，最大、第二大和最小片被指定为 `|Z|>2.4` 的极端锚点。三关再叠加 Sphere/Torus/Cylinder/Cone/多面体。
 
 ### 性能、身份与恢复
 
@@ -42,6 +44,6 @@ DPR 在窄屏限制为 `1.25`，其他手机最多 `1.65`；IntersectionObserver
 - **新增关卡**：在 `LEVEL_POSES` 增加目标/起始姿态，在 `buildLevel()` 注册新的固定几何构建器。
 - **调手感**：修改 pointer 灵敏度、`0.13` 磁吸半径、`0.032` 锁定阈值与 `380ms` 保持时间。
 - **换排版**：编辑 `IdentityTexture.markup()` 的 editions 数据与 editorial grid，保持 `1024×1536` 与无跨域像素依赖。
-- **换材质/几何**：编辑 `buildDepthMosaic()` 的深度函数或三个 `build*()` 的空间物件；投影承载体继续使用共享 `projectedMaterial`。
+- **换材质/几何**：编辑 `splitMosaicRect()` 的递归停止/切分比例、`buildDepthMosaic()` 的深度分档或三个 `build*()` 的空间物件；投影承载体继续使用共享 `projectedMaterial`。
 - **改 shader**：编辑 `ProjectedMaterial.ts`，保持固定 projector matrix、正面 mask 与不翻转 Y 的合同。
 - **改 UI/声音/平台**：分别编辑 `style.css`、`audio.ts`、`src/shared/runtime/bridge.ts`。

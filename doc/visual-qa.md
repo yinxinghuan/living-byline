@@ -6,13 +6,13 @@
 
 | State | 390×844 | 320×568 |
 |---|---|---|
-| 拱门庭院错误视角 | `_qa/ui/depth-editorial-rework-entry-platform-layout-390x844.png` | `_qa/ui/depth-editorial-rework-entry-platform-layout-320x568.png` |
-| 拱门庭院正确视角 | `_qa/ui/depth-editorial-rework-level1-complete-platform-layout-390x844.png` | `_qa/ui/depth-editorial-rework-level1-complete-platform-layout-320x568.png` |
-| 折面剧场错误视角 | `_qa/ui/depth-editorial-rework-level2-entry-platform-layout-390x844.png` | `_qa/ui/depth-editorial-rework-level2-entry-platform-layout-320x568.png` |
-| 折面剧场正确视角 | `_qa/ui/depth-editorial-rework-level2-complete-platform-layout-390x844.png` | `_qa/ui/depth-editorial-rework-level2-complete-platform-layout-320x568.png` |
-| 轨道雕塑错误视角 | `_qa/ui/depth-editorial-rework-level3-entry-platform-layout-390x844.png` | `_qa/ui/depth-editorial-rework-level3-entry-platform-layout-320x568.png` |
-| 轨道雕塑正确视角 | `_qa/ui/depth-editorial-rework-level3-complete-platform-layout-390x844.png` | `_qa/ui/depth-editorial-rework-level3-complete-platform-layout-320x568.png` |
-| 错误恢复 | — | `_qa/ui/depth-editorial-rework-error-platform-layout-320x568.png` |
+| 拱门庭院错误视角 | `_qa/ui/hierarchy-rework-entry-platform-layout-390x844.png` | `_qa/ui/hierarchy-rework-entry-platform-layout-320x568.png` |
+| 拱门庭院正确视角 | `_qa/ui/hierarchy-rework-level1-complete-platform-layout-390x844.png` | `_qa/ui/hierarchy-rework-level1-complete-platform-layout-320x568.png` |
+| 折面剧场错误视角 | `_qa/ui/hierarchy-rework-level2-entry-platform-layout-390x844.png` | `_qa/ui/hierarchy-rework-level2-entry-platform-layout-320x568.png` |
+| 折面剧场正确视角 | `_qa/ui/hierarchy-rework-level2-complete-platform-layout-390x844.png` | `_qa/ui/hierarchy-rework-level2-complete-platform-layout-320x568.png` |
+| 轨道雕塑错误视角 | `_qa/ui/hierarchy-rework-level3-entry-platform-layout-390x844.png` | `_qa/ui/hierarchy-rework-level3-entry-platform-layout-320x568.png` |
+| 轨道雕塑正确视角 | `_qa/ui/hierarchy-rework-level3-complete-platform-layout-390x844.png` | `_qa/ui/hierarchy-rework-level3-complete-platform-layout-320x568.png` |
+| 错误恢复 | — | `_qa/ui/hierarchy-rework-error-platform-layout-320x568.png` |
 
 ## 本轮发现与修复
 
@@ -34,6 +34,12 @@
 - **问题**：旧页面只有用户名、圆环和三行短语；不同深度 Box 的投影边缘无法无缝覆盖，正确视角仍像有阴影的几块板。
 - **修复**：三角体按 `(cameraRadius-z)/cameraRadius` 做透视补偿，并向质心外扩 3.5% 覆盖子像素缝；shader 新增 `resolve`，接近完成时取消 facing 明暗。页面重做为刊头、红蓝 hero、超大用户名、期号、编辑标题、栏目、小标题、双栏正文、色卡与页脚。
 - **复验**：六张正确视角证据均呈现连续矩形版式，没有发丝缝、模型阴影或字体变形；错误视角仍保留相同 mesh 的强烈空间破碎。
+
+### P1 — 块尺寸和深度都过于平均
+
+- **问题**：`4×6×2` 规则三角网格与连续 sin/cos 深度场让每个碎片承担相似视觉重量，复杂但缺少主次和极端事件。
+- **修复**：改为确定性 BSP 不规则分割，以递归停止概率产生大中小块；深度改为中性聚集、中距过渡和三个极端锚点。最大块在不同关卡交替落到最前或最后。
+- **复验**：QA 断言每关页面块 `12–36`、最大/最小面积比 `≥8`、`|Z|<0.5` 聚集比例 25–75%、页面深度跨度 `≥5`。两档错误视角均出现明确主导大块、细小碎片与突然的前后跳跃；正确视角仍无缝。
 
 ### P1 — 手机视场裁切完整装置
 

@@ -4,7 +4,7 @@ import { chromium } from '/Users/yin/.cache/codex-runtimes/codex-primary-runtime
 
 const root = '/Users/yin/code/games/living-byline'
 const port = '61289'
-const evidenceRound = 'depth-editorial-rework'
+const evidenceRound = 'hierarchy-rework'
 const vite = `${root}/node_modules/vite/bin/vite.js`
 const server = spawn(process.execPath, [vite, '--host', '127.0.0.1', '--port', port], {
   cwd: root,
@@ -54,7 +54,7 @@ async function assertScene(page, label, stage, before) {
   if (Math.abs(debug.projectorAspect - debug.textureAspect) > 0.0001) {
     failures.push(`${label} ${stage}: projector aspect does not match source texture`)
   }
-  if (debug.depthSpread < 3.2) {
+  if (debug.depthSpread < 5) {
     failures.push(`${label} ${stage}: scene depth spread ${debug.depthSpread} is too flat`)
   }
   if (
@@ -64,8 +64,20 @@ async function assertScene(page, label, stage, before) {
   ) {
     failures.push(`${label} ${stage}: scene lacks triangle, sphere, or arch geometry`)
   }
-  if (debug.objectCount < 55) {
+  if (debug.objectCount < 20) {
     failures.push(`${label} ${stage}: only ${debug.objectCount} scene objects`)
+  }
+  if (debug.mosaicPieceCount < 12 || debug.mosaicPieceCount > 36) {
+    failures.push(`${label} ${stage}: mosaic piece count ${debug.mosaicPieceCount} is not hierarchical`)
+  }
+  if (debug.mosaicAreaRatio < 8) {
+    failures.push(`${label} ${stage}: mosaic area ratio ${debug.mosaicAreaRatio} is too uniform`)
+  }
+  if (debug.mosaicNearShare < 0.25 || debug.mosaicNearShare > 0.75) {
+    failures.push(`${label} ${stage}: near-depth share ${debug.mosaicNearShare} lacks clustering`)
+  }
+  if (debug.mosaicDepthSpread < 5) {
+    failures.push(`${label} ${stage}: mosaic depth spread ${debug.mosaicDepthSpread} lacks outliers`)
   }
   if (before && Math.abs(before.yaw - debug.yaw) < 0.25) {
     failures.push(`${label} ${stage}: camera did not rotate materially`)

@@ -25,6 +25,10 @@ type DebugState = {
   angularError: number
   alignment: number
   depthSpread: number
+  mosaicAreaRatio: number
+  mosaicNearShare: number
+  mosaicDepthSpread: number
+  mosaicPieceCount: number
   geometryKinds: string[]
   objectCount: number
   transformChecksum: number

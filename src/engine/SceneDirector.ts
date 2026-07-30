@@ -17,6 +17,13 @@ type ViewPose = {
   pitch: number
 }
 
+type MosaicRect = {
+  x0: number
+  x1: number
+  y0: number
+  y1: number
+}
+
 const PAGE_ASPECT = 2 / 3
 const CAMERA_RADIUS = 11.5
 const PROJECTOR_FOV = 24
@@ -156,6 +163,8 @@ export class SceneDirector {
   getDebugState() {
     const target = LEVEL_POSES[this.level].target
     const depths: number[] = []
+    const mosaicDepths: number[] = []
+    const mosaicAreas: number[] = []
     const kinds = new Set<string>()
     let transformChecksum = 0
     this.root.traverse((object) => {
@@ -164,6 +173,10 @@ export class SceneDirector {
         object.getWorldPosition(world)
         depths.push(world.z)
         kinds.add(object.geometry.type)
+        if (object.userData.mosaicArea) {
+          mosaicAreas.push(object.userData.mosaicArea as number)
+          mosaicDepths.push(object.userData.mosaicDepth as number)
+        }
       }
     })
     this.sceneObjects.forEach((object, index) => {
@@ -184,6 +197,16 @@ export class SceneDirector {
       angularError: this.angularError(),
       alignment: this.alignment,
       depthSpread: depths.length ? Math.max(...depths) - Math.min(...depths) : 0,
+      mosaicAreaRatio: mosaicAreas.length
+        ? Math.max(...mosaicAreas) / Math.min(...mosaicAreas)
+        : 0,
+      mosaicNearShare: mosaicDepths.length
+        ? mosaicDepths.filter((depth) => Math.abs(depth) < 0.5).length / mosaicDepths.length
+        : 0,
+      mosaicDepthSpread: mosaicDepths.length
+        ? Math.max(...mosaicDepths) - Math.min(...mosaicDepths)
+        : 0,
+      mosaicPieceCount: mosaicAreas.length,
       geometryKinds: [...kinds],
       objectCount: this.sceneObjects.length,
       transformChecksum: Number(transformChecksum.toFixed(6)),
@@ -307,40 +330,66 @@ export class SceneDirector {
   private buildDepthMosaic(level: number) {
     const width = 3.3
     const height = 4.95
-    const columns = 4
-    const rows = 6
-    const cellWidth = width / columns
-    const cellHeight = height / rows
-    for (let row = 0; row < rows; row += 1) {
-      for (let column = 0; column < columns; column += 1) {
-        const x0 = -width / 2 + column * cellWidth
-        const x1 = x0 + cellWidth
-        const y1 = height / 2 - row * cellHeight
-        const y0 = y1 - cellHeight
-        const diagonal = (row + column + level) % 2 === 0
-        const triangles: Array<Array<[number, number]>> = diagonal
-          ? [
-              [[x0, y0], [x1, y0], [x1, y1]],
-              [[x0, y0], [x1, y1], [x0, y1]],
-            ]
-          : [
-              [[x0, y0], [x1, y0], [x0, y1]],
-              [[x1, y0], [x1, y1], [x0, y1]],
-            ]
-        triangles.forEach((points, triangle) => {
-          const phase = row * 1.37 + column * 2.11 + triangle * 0.83
-          const z = level === 0
-            ? Math.sin(phase) * 1.62
-            : level === 1
-              ? Math.cos(phase * 1.18 + row * 0.42) * 1.86
-              : Math.sin(phase * 1.46 + column * 0.72) * 2.05
-          this.addDepthTriangle(points, z, 0.1 + Math.abs(z) * 0.11)
-        })
+    const random = seededRandom(7429 + level * 3181)
+    const regions = splitMosaicRect(
+      { x0: -width / 2, x1: width / 2, y0: -height / 2, y1: height / 2 },
+      random,
+      level,
+    )
+    const pieces: Array<Array<[number, number]>> = []
+    regions.forEach((region, index) => {
+      const rectangle: Array<[number, number]> = [
+        [region.x0, region.y0],
+        [region.x1, region.y0],
+        [region.x1, region.y1],
+        [region.x0, region.y1],
+      ]
+      const area = (region.x1 - region.x0) * (region.y1 - region.y0)
+      if (area > 0.2 && random() < 0.48) {
+        const diagonal = (index + level) % 2 === 0
+        pieces.push(
+          diagonal
+            ? [rectangle[0], rectangle[1], rectangle[2]]
+            : [rectangle[0], rectangle[1], rectangle[3]],
+          diagonal
+            ? [rectangle[0], rectangle[2], rectangle[3]]
+            : [rectangle[1], rectangle[2], rectangle[3]],
+        )
+      } else {
+        pieces.push(rectangle)
       }
-    }
+    })
+
+    const byArea = pieces
+      .map((points, index) => ({ index, area: polygonArea(points) }))
+      .sort((a, b) => b.area - a.area)
+    const foregroundAnchor = byArea[0]?.index ?? 0
+    const backgroundAnchor = byArea[1]?.index ?? 1
+    const tinyAccent = byArea.at(-1)?.index ?? pieces.length - 1
+
+    pieces.forEach((points, index) => {
+      const noise = hash01(index * 13.17 + level * 71.9)
+      let z: number
+      if (index === foregroundAnchor) {
+        z = level === 1 ? -2.85 : 2.95
+      } else if (index === backgroundAnchor) {
+        z = level === 1 ? 2.72 : -2.68
+      } else if (index === tinyAccent) {
+        z = level === 2 ? -3.05 : 2.48
+      } else if (noise < 0.58) {
+        z = (noise / 0.58 - 0.5) * 0.82
+      } else if (noise < 0.78) {
+        z = 0.72 + ((noise - 0.58) / 0.2) * 0.82
+      } else if (noise < 0.94) {
+        z = -0.78 - ((noise - 0.78) / 0.16) * 0.9
+      } else {
+        z = (index % 2 ? 1 : -1) * (2.05 + ((noise - 0.94) / 0.06) * 0.55)
+      }
+      this.addDepthPiece(points, z, 0.09 + Math.abs(z) * 0.105)
+    })
   }
 
-  private addDepthTriangle(
+  private addDepthPiece(
     points: Array<[number, number]>,
     z: number,
     thickness: number,
@@ -364,7 +413,9 @@ export class SceneDirector {
       steps: 1,
       curveSegments: 1,
     })
-    this.addProjected(geometry, [0, 0, z - thickness], [0, 0, 0])
+    const mesh = this.addProjected(geometry, [0, 0, z - thickness], [0, 0, 0])
+    mesh.userData.mosaicArea = polygonArea(points)
+    mesh.userData.mosaicDepth = z
   }
 
   private addProjected(
@@ -377,6 +428,7 @@ export class SceneDirector {
     mesh.rotation.set(...rotation)
     this.root.add(mesh)
     this.sceneObjects.push(mesh)
+    return mesh
   }
 
   private buildGround(level: number) {
@@ -535,6 +587,70 @@ function setOrbitPosition(camera: THREE.Camera, pose: ViewPose, radius: number) 
     Math.sin(pose.pitch) * radius,
     Math.cos(pose.yaw) * cosPitch * radius,
   )
+}
+
+function splitMosaicRect(
+  root: MosaicRect,
+  random: () => number,
+  level: number,
+) {
+  const regions: MosaicRect[] = []
+  const visit = (rect: MosaicRect, depth: number) => {
+    const width = rect.x1 - rect.x0
+    const height = rect.y1 - rect.y0
+    const stopChance = depth < 2 ? 0 : depth === 2 ? 0.18 : depth === 3 ? 0.44 : 0.72
+    if (depth >= 5 || (depth >= 2 && random() < stopChance)) {
+      regions.push(rect)
+      return
+    }
+    const splitVertical = width / height > 1.35
+      ? true
+      : height / width > 1.7
+        ? false
+        : random() > 0.48
+    const edgeBias = random()
+    const ratio = depth === 0
+      ? [0.27, 0.64, 0.38][level]
+      : edgeBias < 0.5
+        ? 0.16 + random() * 0.22
+        : 0.48 + random() * 0.34
+    if (splitVertical) {
+      const cut = rect.x0 + width * ratio
+      visit({ ...rect, x1: cut }, depth + 1)
+      visit({ ...rect, x0: cut }, depth + 1)
+    } else {
+      const cut = rect.y0 + height * ratio
+      visit({ ...rect, y1: cut }, depth + 1)
+      visit({ ...rect, y0: cut }, depth + 1)
+    }
+  }
+  visit(root, 0)
+  return regions
+}
+
+function polygonArea(points: Array<[number, number]>) {
+  let area = 0
+  for (let index = 0; index < points.length; index += 1) {
+    const [x1, y1] = points[index]
+    const [x2, y2] = points[(index + 1) % points.length]
+    area += x1 * y2 - x2 * y1
+  }
+  return Math.abs(area) * 0.5
+}
+
+function seededRandom(seed: number) {
+  let state = seed >>> 0
+  return () => {
+    state += 0x6d2b79f5
+    let value = state
+    value = Math.imul(value ^ (value >>> 15), value | 1)
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function hash01(value: number) {
+  return Math.abs(Math.sin(value * 12.9898) * 43758.5453) % 1
 }
 
 function delay(ms: number) {
