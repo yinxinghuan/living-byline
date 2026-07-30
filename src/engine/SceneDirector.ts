@@ -30,9 +30,9 @@ const PROJECTOR_FOV = 24
 const DISPLAY_FOV = 34
 const LOOK_AT = new THREE.Vector3(0, 0, 0)
 const LEVEL_POSES = [
-  { target: { yaw: 0.3, pitch: -0.035 }, start: { yaw: -0.42, pitch: 0.13 } },
-  { target: { yaw: -0.34, pitch: 0.09 }, start: { yaw: 0.38, pitch: -0.12 } },
-  { target: { yaw: 0.18, pitch: 0.16 }, start: { yaw: -0.5, pitch: -0.09 } },
+  { target: { yaw: 0.3, pitch: -0.035 }, start: { yaw: -1.42, pitch: 0.42 } },
+  { target: { yaw: -0.34, pitch: 0.09 }, start: { yaw: 1.48, pitch: -0.46 } },
+  { target: { yaw: 0.18, pitch: 0.16 }, start: { yaw: -1.76, pitch: -0.38 } },
 ] as const
 
 export class SceneDirector {
@@ -70,7 +70,7 @@ export class SceneDirector {
 
   constructor(
     container: HTMLElement,
-    identity: { name: string; platform: string },
+    identity: { name: string; platform: string; avatarDataUrl: string },
     events: DirectorEvents,
   ) {
     this.container = container
@@ -152,12 +152,8 @@ export class SceneDirector {
   nudgeView(yawDelta: number, pitchDelta: number) {
     if (this.completed) return
     this.events.onInteraction()
-    this.desiredView.yaw = THREE.MathUtils.clamp(
-      this.desiredView.yaw + yawDelta,
-      LEVEL_POSES[this.level].target.yaw - 1.15,
-      LEVEL_POSES[this.level].target.yaw + 1.15,
-    )
-    this.desiredView.pitch = THREE.MathUtils.clamp(this.desiredView.pitch + pitchDelta, -0.58, 0.58)
+    this.desiredView.yaw += yawDelta
+    this.desiredView.pitch = THREE.MathUtils.clamp(this.desiredView.pitch + pitchDelta, -1.42, 1.42)
   }
 
   getDebugState() {
@@ -251,15 +247,11 @@ export class SceneDirector {
     const deltaX = event.clientX - this.lastPointer.x
     const deltaY = event.clientY - this.lastPointer.y
     this.lastPointer.set(event.clientX, event.clientY)
-    this.desiredView.yaw = THREE.MathUtils.clamp(
-      this.desiredView.yaw - deltaX * 0.006,
-      LEVEL_POSES[this.level].target.yaw - 1.15,
-      LEVEL_POSES[this.level].target.yaw + 1.15,
-    )
+    this.desiredView.yaw -= deltaX * 0.006
     this.desiredView.pitch = THREE.MathUtils.clamp(
       this.desiredView.pitch + deltaY * 0.0048,
-      -0.58,
-      0.58,
+      -1.42,
+      1.42,
     )
   }
 
@@ -474,7 +466,10 @@ export class SceneDirector {
 
   private angularError() {
     const target = LEVEL_POSES[this.level].target
-    return Math.hypot(this.currentView.yaw - target.yaw, this.currentView.pitch - target.pitch)
+    return Math.hypot(
+      shortestAngle(this.currentView.yaw - target.yaw),
+      this.currentView.pitch - target.pitch,
+    )
   }
 
   private onVisibility = () => {
@@ -504,15 +499,6 @@ export class SceneDirector {
     )
 
     const target = LEVEL_POSES[this.level].target
-    const desiredError = Math.hypot(
-      this.desiredView.yaw - target.yaw,
-      this.desiredView.pitch - target.pitch,
-    )
-    if (!this.dragging && desiredError < 0.13 && !this.completed) {
-      const magnet = this.reducedMotion ? 0.24 : 0.065
-      this.desiredView.yaw = THREE.MathUtils.lerp(this.desiredView.yaw, target.yaw, magnet)
-      this.desiredView.pitch = THREE.MathUtils.lerp(this.desiredView.pitch, target.pitch, magnet)
-    }
     const damping = this.dragging ? 0.24 : 0.14
     this.currentView.yaw = THREE.MathUtils.lerp(this.currentView.yaw, this.desiredView.yaw, damping)
     this.currentView.pitch = THREE.MathUtils.lerp(this.currentView.pitch, this.desiredView.pitch, damping)
@@ -651,6 +637,10 @@ function seededRandom(seed: number) {
 
 function hash01(value: number) {
   return Math.abs(Math.sin(value * 12.9898) * 43758.5453) % 1
+}
+
+function shortestAngle(angle: number) {
+  return Math.atan2(Math.sin(angle), Math.cos(angle))
 }
 
 function delay(ms: number) {

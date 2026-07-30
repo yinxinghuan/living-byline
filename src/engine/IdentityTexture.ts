@@ -3,6 +3,7 @@ import * as THREE from 'three'
 type IdentityTextureOptions = {
   name: string
   platform: string
+  avatarDataUrl: string
   width?: number
   height?: number
 }
@@ -15,10 +16,12 @@ export class IdentityTexture {
   private readonly height: number
   private readonly name: string
   private readonly platform: string
+  private readonly avatarDataUrl: string
 
   constructor({
     name,
     platform,
+    avatarDataUrl,
     width = 1024,
     height = 1536,
   }: IdentityTextureOptions) {
@@ -26,6 +29,7 @@ export class IdentityTexture {
     this.height = height
     this.name = name
     this.platform = platform
+    this.avatarDataUrl = avatarDataUrl
     this.canvas = document.createElement('canvas')
     this.canvas.width = width
     this.canvas.height = height
@@ -61,72 +65,64 @@ export class IdentityTexture {
   private markup(level: number) {
     const safeName = escapeMarkup(this.name)
     const platform = escapeMarkup(this.platform)
+    const avatar = escapeMarkup(this.avatarDataUrl)
     const editions = [
       {
         accent: '#ff5b4d',
         second: '#3156ff',
         number: '01',
-        kicker: 'THE ARCHIVE OF A LIVING NAME',
-        headline: 'A NAME BECOMES A PLACE',
-        body: 'Identity is not a label fixed to one surface. It changes with distance, angle and the person who is looking.',
-        note: 'TURN THE ROOM / HOLD THE VIEW / READ THE WHOLE',
+        kicker: 'A NAME / IN ONE PRECISE VIEW',
       },
       {
         accent: '#3156ff',
         second: '#ff5b4d',
         number: '02',
-        kicker: 'TYPE / DISTANCE / MEMORY',
-        headline: 'FOLD SPACE INTO LANGUAGE',
-        body: 'Every plane carries a fragment. Perspective edits the fragments into one continuous voice.',
-        note: 'NEAR AND FAR / EDGE AND FACE / ONE COMPOSITION',
+        kicker: 'A FACE / HELD BY DISTANCE',
       },
       {
         accent: '#ff5b4d',
         second: '#3156ff',
         number: '03',
-        kicker: 'AN ORBIT AROUND IDENTITY',
-        headline: 'STILL MOVING. STILL YOURS.',
-        body: 'The layout survives every interruption. At one precise coordinate the system remembers how to speak.',
-        note: 'PROJECTED / ALIGNED / PRINTED WITH ALTERU',
+        kicker: 'YOU / SEEN FROM EVERY SIDE',
       },
     ][level]
-    return `<div style="box-sizing:border-box;width:100%;height:100%;padding:58px 58px 54px;background:#f3f0e8;color:#07090d;font-family:Arial,Helvetica,PingFang SC,sans-serif;display:grid;grid-template-rows:auto 420px 1fr auto;gap:34px;overflow:hidden">
-      <header style="display:grid;grid-template-columns:1fr auto;gap:24px;align-items:start;border-top:8px solid #07090d;padding-top:20px">
-        <div style="font:900 21px/1 Arial,sans-serif;letter-spacing:.19em">LIVING BYLINE®</div>
-        <div style="text-align:right;font:700 19px/1.35 Arial,sans-serif;letter-spacing:.12em">${platform.toUpperCase()}<br/>ISSUE ${editions.number}</div>
-      </header>
-      <section style="position:relative;display:grid;grid-template-columns:64% 36%;overflow:hidden;background:${editions.accent}">
-        <div style="position:relative;z-index:2;display:flex;flex-direction:column;justify-content:space-between;padding:34px 30px 30px;color:#f3f0e8">
-          <span style="font:800 18px/1 Arial,sans-serif;letter-spacing:.16em">${editions.kicker}</span>
-          <strong style="max-width:640px;font:900 ${nameSize(this.name)}px/.82 Arial Black,Arial,PingFang SC,sans-serif;letter-spacing:-.075em;overflow-wrap:anywhere">${safeName}</strong>
-          <span style="font:900 25px/1 Arial,sans-serif;letter-spacing:.08em">× ${platform.toUpperCase()}</span>
+    const name = `${Math.min(190, nameSize(this.name) * 1.55)}px`
+    const compositions = [
+      `<div style="position:absolute;inset:0;background:#f3f0e8;color:#07090d;overflow:hidden">
+        <div style="position:absolute;left:-178px;top:-128px;width:940px;height:940px">${alterULogo('#07090d')}</div>
+        <div style="position:absolute;right:0;top:0;width:176px;height:100%;background:${editions.accent}"></div>
+        <div style="position:absolute;right:48px;top:54px;font:900 210px/.76 Arial Black,Arial,sans-serif;color:#f3f0e8;letter-spacing:-.14em;writing-mode:vertical-rl">${editions.number}</div>
+        <div style="position:absolute;left:68px;right:228px;bottom:88px">
+          <span style="display:block;margin-bottom:24px;font:800 20px/1 Arial,sans-serif;letter-spacing:.19em">${editions.kicker}</span>
+          <strong style="display:block;font:900 ${name}/.78 Arial Black,Arial,PingFang SC,sans-serif;letter-spacing:-.08em;overflow-wrap:anywhere">${safeName}</strong>
         </div>
-        <div style="position:relative;background:${editions.second}">
-          <div style="position:absolute;left:-106px;top:62px;width:246px;height:246px;border:30px solid #f3f0e8;border-radius:50%"></div>
-          <div style="position:absolute;right:20px;bottom:-25px;color:#07090d;font:900 230px/.8 Arial Black,Arial,sans-serif;letter-spacing:-.12em">${editions.number}</div>
+      </div>`,
+      `<div style="position:absolute;inset:0;background:${editions.accent};color:#f3f0e8;overflow:hidden">
+        <div style="position:absolute;right:0;top:0;width:29%;height:100%;overflow:hidden;background:#07090d">
+          <img src="${avatar}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/>
         </div>
-      </section>
-      <main style="display:grid;grid-template-columns:38% 1fr;gap:34px;border-top:4px solid #07090d;padding-top:30px">
-        <div style="display:flex;flex-direction:column;justify-content:space-between;border-right:4px solid #07090d;padding-right:28px">
-          <span style="font:800 18px/1.3 Arial,sans-serif;letter-spacing:.14em">ALTERU EDITORIAL<br/>IDENTITY STUDY<br/>VOL. ${editions.number}</span>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-            <i style="height:62px;background:${editions.accent}"></i>
-            <i style="height:62px;background:#07090d"></i>
-            <i style="height:62px;background:${editions.second}"></i>
-          </div>
+        <div style="position:absolute;left:-188px;top:84px;width:960px;height:960px">${alterULogo('#f3f0e8')}</div>
+        <div style="position:absolute;right:34px;top:52px;font:900 205px/.76 Arial Black,Arial,sans-serif;color:${editions.second};letter-spacing:-.14em">${editions.number}</div>
+        <div style="position:absolute;left:62px;right:34%;bottom:74px">
+          <span style="display:block;margin-bottom:22px;font:800 20px/1.15 Arial,sans-serif;letter-spacing:.17em">${editions.kicker}</span>
+          <strong style="display:block;font:900 ${Math.max(72, nameSize(this.name) * 1.08)}px/.78 Arial Black,Arial,PingFang SC,sans-serif;letter-spacing:-.08em;overflow-wrap:anywhere">${safeName}</strong>
         </div>
-        <div style="display:flex;flex-direction:column;justify-content:space-between;min-width:0">
-          <h1 style="margin:0;font:900 92px/.86 Arial Black,Arial,PingFang SC,sans-serif;letter-spacing:-.07em">${editions.headline}</h1>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;padding-top:28px;border-top:3px solid #07090d">
-            <p style="margin:0;font:700 24px/1.28 Arial,sans-serif">${editions.body}</p>
-            <p style="margin:0;font:500 20px/1.42 Arial,sans-serif">A continuous composition can live on many surfaces. The image is complete only when movement, depth and attention share the same point of view.</p>
-          </div>
+      </div>`,
+      `<div style="position:absolute;inset:0;background:#07090d;color:#f3f0e8;overflow:hidden">
+        <div style="position:absolute;left:102px;top:-122px;width:900px;height:900px">${alterULogo('#f3f0e8')}</div>
+        <div style="position:absolute;left:0;right:0;top:700px;height:304px;overflow:hidden;background:${editions.second}">
+          <img src="${avatar}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center 42%"/>
         </div>
-      </main>
-      <footer style="display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end;border-top:8px solid #07090d;padding-top:18px">
-        <strong style="font:900 22px/1 Arial,sans-serif;letter-spacing:.12em">${editions.note}</strong>
-        <span style="font:700 18px/1 Arial,sans-serif;letter-spacing:.14em">${editions.number} / 03</span>
-      </footer>
+        <div style="position:absolute;left:62px;right:60px;bottom:72px;display:flex;align-items:flex-end;justify-content:space-between;gap:36px">
+          <strong style="max-width:760px;font:900 ${name}/.76 Arial Black,Arial,PingFang SC,sans-serif;letter-spacing:-.085em;overflow-wrap:anywhere">${safeName}</strong>
+          <div style="flex:none;color:${editions.accent};font:900 230px/.7 Arial Black,Arial,sans-serif;letter-spacing:-.15em">${editions.number}</div>
+        </div>
+        <span style="position:absolute;left:64px;top:52px;font:800 20px/1 Arial,sans-serif;letter-spacing:.19em">${editions.kicker}</span>
+      </div>`,
+    ]
+    return `<div style="position:relative;width:100%;height:100%;overflow:hidden;font-family:Arial,Helvetica,PingFang SC,sans-serif">
+      ${compositions[level]}
+      <div style="position:absolute;right:34px;bottom:28px;font:800 17px/1 Arial,sans-serif;letter-spacing:.18em;color:${level === 0 ? '#07090d' : '#f3f0e8'}">${platform.toUpperCase()} / 0${level + 1}</div>
     </div>`
   }
 
@@ -135,19 +131,12 @@ export class IdentityTexture {
     ctx.fillStyle = '#f3f0e8'
     ctx.fillRect(0, 0, this.width, this.height)
     ctx.fillStyle = level === 1 ? '#4d7cff' : '#ff5b4d'
-    ctx.fillRect(58, 150, 908, 420)
-    ctx.fillStyle = level === 1 ? '#ff5b4d' : '#3156ff'
-    ctx.fillRect(700, 150, 266, 420)
-    ctx.fillStyle = '#f3f0e8'
-    ctx.font = '900 118px Arial'
-    ctx.fillText(this.name.slice(0, 12), 82, 440, 610)
-    ctx.font = '800 38px Arial'
-    ctx.fillText(`× ${this.platform.toUpperCase()}`, 84, 520)
+    ctx.fillRect(level === 0 ? 848 : 0, 0, level === 0 ? 176 : 1024, 1536)
     ctx.fillStyle = '#07090d'
-    ctx.font = '900 86px Arial'
-    ctx.fillText(['A NAME BECOMES', 'FOLD SPACE INTO', 'STILL MOVING.'][level], 70, 850, 880)
-    ctx.font = '700 34px Arial'
-    ctx.fillText('IDENTITY / DISTANCE / ONE PRECISE VIEW', 70, 1410)
+    ctx.font = '900 146px Arial'
+    ctx.fillText(this.name.slice(0, 12), 62, 1370, 760)
+    ctx.font = '800 28px Arial'
+    ctx.fillText(`${this.platform.toUpperCase()} / 0${level + 1}`, 64, 1480)
   }
 
   dispose() {
@@ -169,4 +158,11 @@ function escapeMarkup(value: string) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;')
+}
+
+function alterULogo(fill: string) {
+  return `<svg width="100%" height="100%" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M170.98 80.6864C175.826 80.3379 179.093 82.8464 180.922 87.1309C184.554 95.5742 179.373 98.9845 175.515 105.325C163.859 124.48 165.503 149.557 163.744 170.582C161.932 192.259 154.492 222.584 132.269 231.923C124.974 234.989 114.517 234.372 107.397 231.013C70.2537 212.926 93.1286 160.103 105.525 133.265C109.335 126.098 112.98 118.784 117.907 112.277C121.491 107.547 127.748 104.724 132.998 108.827C135.386 110.694 136.494 114.684 135.563 117.517C133.513 123.752 129.105 129.175 126.136 135.017C117.204 151.711 107.57 173.577 108.149 192.736C108.648 197.729 110.443 203.949 114.709 207.163C121.717 212.44 129.246 209.446 133.613 202.772C139.289 194.091 141.378 184.867 142.431 174.855C143.583 164.684 143.524 154.864 144.04 144.611C144.994 125.736 146.094 103.972 158.412 88.4443C161.509 84.5388 165.905 81.2324 170.98 80.6864Z" fill="${fill}"/>
+    <path d="M86.9111 55.8511C87.5972 55.021 88.2531 54.3294 88.9727 53.5417C91.25 52.4699 98.6717 56.4898 104.848 54.7181C114.926 51.8253 124.216 44.6228 133.929 32.5885C137.352 28.3472 139.875 23.9207 143.53 19.8896C144.863 19.2069 144.275 19.3179 145.281 19.7403C145.408 20.3861 145.647 21.0867 144.974 22.1183C129.708 45.5149 124.762 63.0491 135.86 73.3957C137.561 74.9843 140.36 76.5377 141.933 78.4606L140.234 80.9976C139.451 81.6669 139.143 82.0962 138.465 81.9081C133.792 80.6128 129.85 79.3599 124.485 79.4064C114.232 79.4902 104.957 91.2197 95.9169 103.826C93.848 106.711 90.2527 112.469 87.8923 114.692C86.2512 115.246 86.8375 115.356 85.9333 114.646C86.1422 111.648 90.6859 105.295 92.5935 101.966C103.729 82.5318 103.185 67.3286 93.9942 61.1122C92.4408 60.0674 87.4627 58.0224 86.9111 55.8511Z" fill="${fill}"/>
+  </svg>`
 }

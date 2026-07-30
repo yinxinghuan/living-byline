@@ -4,7 +4,7 @@ import { chromium } from '/Users/yin/.cache/codex-runtimes/codex-primary-runtime
 
 const root = '/Users/yin/code/games/living-byline'
 const port = '61289'
-const evidenceRound = 'hierarchy-rework'
+const evidenceRound = 'brand-free-orbit-rework'
 const vite = `${root}/node_modules/vite/bin/vite.js`
 const server = spawn(process.execPath, [vite, '--host', '127.0.0.1', '--port', port], {
   cwd: root,
@@ -22,7 +22,11 @@ async function dragToTarget(page) {
   const viewport = page.viewportSize()
   const startX = Math.round((viewport?.width || 390) * 0.5)
   const startY = Math.round((viewport?.height || 844) * 0.52)
-  const deltaX = -(before.targetYaw - before.yaw) / 0.006
+  const yawDelta = Math.atan2(
+    Math.sin(before.targetYaw - before.yaw),
+    Math.cos(before.targetYaw - before.yaw),
+  )
+  const deltaX = -yawDelta / 0.006
   const deltaY = (before.targetPitch - before.pitch) / 0.0048
   const client = await page.context().newCDPSession(page)
   await client.send('Input.dispatchTouchEvent', {
@@ -43,6 +47,51 @@ async function dragToTarget(page) {
   await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   await client.detach()
   return before
+}
+
+async function assertFreeOrbit(page, label) {
+  const before = await page.evaluate(() => window.__livingByline?.debug())
+  if (!before) throw new Error('Missing debug state before free orbit')
+  const viewport = page.viewportSize()
+  const client = await page.context().newCDPSession(page)
+  for (let pass = 0; pass < 4; pass += 1) {
+    const y = Math.round((viewport?.height || 844) * 0.5)
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: 285, y, id: 1 }],
+    })
+    for (let step = 1; step <= 10; step += 1) {
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x: 285 - 230 * (step / 10), y, id: 1 }],
+      })
+      await page.waitForTimeout(12)
+    }
+    await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  }
+  const centerX = Math.round((viewport?.width || 390) * 0.5)
+  await client.send('Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: centerX, y: 180, id: 2 }],
+  })
+  for (let step = 1; step <= 10; step += 1) {
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: centerX, y: 180 + 145 * (step / 10), id: 2 }],
+    })
+    await page.waitForTimeout(12)
+  }
+  await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await client.detach()
+  await page.waitForTimeout(650)
+  const after = await page.evaluate(() => window.__livingByline?.debug())
+  if (!after) throw new Error('Missing debug state after free orbit')
+  if (Math.abs(after.yaw - before.yaw) < 4.5) {
+    failures.push(`${label}: horizontal orbit remained limited (${before.yaw} → ${after.yaw})`)
+  }
+  if (Math.abs(after.pitch) < 0.75) {
+    failures.push(`${label}: vertical orbit remained limited (${after.pitch})`)
+  }
 }
 
 async function assertScene(page, label, stage, before) {
@@ -149,6 +198,10 @@ for (const [label, width, height] of [
   await page.screenshot({
     path: `${root}/_qa/ui/${evidenceRound}-entry-platform-layout-${label}.png`,
   })
+  await assertFreeOrbit(page, label)
+  await page.screenshot({
+    path: `${root}/_qa/ui/${evidenceRound}-free-orbit-platform-layout-${label}.png`,
+  })
 
   for (let stageLevel = 0; stageLevel < 3; stageLevel += 1) {
     if (stageLevel > 0) {
@@ -184,6 +237,22 @@ await errorPage.screenshot({
   path: `${root}/_qa/ui/${evidenceRound}-error-platform-layout-320x568.png`,
 })
 await errorPage.close()
+
+const externalPage = await browser.newPage({
+  viewport: { width: 390, height: 844 },
+  deviceScaleFactor: 1,
+  isMobile: true,
+  hasTouch: true,
+})
+await externalPage.goto(`http://127.0.0.1:${port}/?user_name=AlterU`, {
+  waitUntil: 'domcontentloaded',
+})
+await externalPage.waitForFunction(() => document.body.dataset.visualReady === 'true')
+await externalPage.waitForTimeout(1200)
+await externalPage.screenshot({
+  path: `${root}/_qa/ui/${evidenceRound}-entry-external-guest-390x844.png`,
+})
+await externalPage.close()
 
 await browser.close()
 server.kill('SIGTERM')

@@ -6,13 +6,13 @@
 
 | State | 390×844 | 320×568 |
 |---|---|---|
-| 拱门庭院错误视角 | `_qa/ui/hierarchy-rework-entry-platform-layout-390x844.png` | `_qa/ui/hierarchy-rework-entry-platform-layout-320x568.png` |
-| 拱门庭院正确视角 | `_qa/ui/hierarchy-rework-level1-complete-platform-layout-390x844.png` | `_qa/ui/hierarchy-rework-level1-complete-platform-layout-320x568.png` |
-| 折面剧场错误视角 | `_qa/ui/hierarchy-rework-level2-entry-platform-layout-390x844.png` | `_qa/ui/hierarchy-rework-level2-entry-platform-layout-320x568.png` |
-| 折面剧场正确视角 | `_qa/ui/hierarchy-rework-level2-complete-platform-layout-390x844.png` | `_qa/ui/hierarchy-rework-level2-complete-platform-layout-320x568.png` |
-| 轨道雕塑错误视角 | `_qa/ui/hierarchy-rework-level3-entry-platform-layout-390x844.png` | `_qa/ui/hierarchy-rework-level3-entry-platform-layout-320x568.png` |
-| 轨道雕塑正确视角 | `_qa/ui/hierarchy-rework-level3-complete-platform-layout-390x844.png` | `_qa/ui/hierarchy-rework-level3-complete-platform-layout-320x568.png` |
-| 错误恢复 | — | `_qa/ui/hierarchy-rework-error-platform-layout-320x568.png` |
+| 拱门庭院错误视角 | `_qa/ui/brand-free-orbit-rework-entry-platform-layout-390x844.png` | `_qa/ui/brand-free-orbit-rework-entry-platform-layout-320x568.png` |
+| 水平多圈 + 高俯仰 | `_qa/ui/brand-free-orbit-rework-free-orbit-platform-layout-390x844.png` | `_qa/ui/brand-free-orbit-rework-free-orbit-platform-layout-320x568.png` |
+| 01 水印 × 用户名 | `_qa/ui/brand-free-orbit-rework-level1-complete-platform-layout-390x844.png` | `_qa/ui/brand-free-orbit-rework-level1-complete-platform-layout-320x568.png` |
+| 02 水印 × 头像窄带 | `_qa/ui/brand-free-orbit-rework-level2-complete-platform-layout-390x844.png` | `_qa/ui/brand-free-orbit-rework-level2-complete-platform-layout-320x568.png` |
+| 03 水印 × 头像横带 × 用户名 | `_qa/ui/brand-free-orbit-rework-level3-complete-platform-layout-390x844.png` | `_qa/ui/brand-free-orbit-rework-level3-complete-platform-layout-320x568.png` |
+| 错误恢复 | — | `_qa/ui/brand-free-orbit-rework-error-platform-layout-320x568.png` |
+| 外部访客栏发布检查 | `_qa/ui/brand-free-orbit-rework-entry-external-guest-390x844.png` | — |
 
 ## 本轮发现与修复
 
@@ -26,13 +26,13 @@
 ### P1 — 3D 场景退化成薄板
 
 - **问题**：旧构图主要由少量 PlaneGeometry 竖条组成，球体、厚度、建筑轮廓和空间遮挡不足。
-- **修复**：用 48 个带厚度的三角体覆盖版面，三关最大深度范围提高到约 `3.24 / 3.72 / 4.10`；再加入球体、圆环、圆柱/圆锥和多面体。
-- **复验**：每关 `objectCount >= 55`，同时包含 ExtrudeGeometry、SphereGeometry 与 TorusGeometry。错误视角截图清楚显示三角断面、暗侧面与多层遮挡。
+- **修复**：用 `12–36` 个大小悬殊、带厚度的矩形/三角 ExtrudeGeometry 覆盖版面，页面深度跨度提高到至少 `5`；再加入球体、圆环、圆柱/圆锥和多面体。
+- **复验**：每关 `objectCount >= 20`，同时包含 ExtrudeGeometry、SphereGeometry 与 TorusGeometry。错误视角截图清楚显示断面、暗侧面与多层遮挡。
 
 ### P0 — 正确视角仍有缝隙、阴影，版式过于单调
 
 - **问题**：旧页面只有用户名、圆环和三行短语；不同深度 Box 的投影边缘无法无缝覆盖，正确视角仍像有阴影的几块板。
-- **修复**：三角体按 `(cameraRadius-z)/cameraRadius` 做透视补偿，并向质心外扩 3.5% 覆盖子像素缝；shader 新增 `resolve`，接近完成时取消 facing 明暗。页面重做为刊头、红蓝 hero、超大用户名、期号、编辑标题、栏目、小标题、双栏正文、色卡与页脚。
+- **修复**：承载体按 `(cameraRadius-z)/cameraRadius` 做透视补偿，并向质心外扩 3.5% 覆盖子像素缝；shader 新增 `resolve`，接近完成时取消 facing 明暗。页面最终收敛为超大 SVG 水印、用户名、矩形头像块、编号和一行微型说明。
 - **复验**：六张正确视角证据均呈现连续矩形版式，没有发丝缝、模型阴影或字体变形；错误视角仍保留相同 mesh 的强烈空间破碎。
 
 ### P1 — 块尺寸和深度都过于平均
@@ -40,6 +40,18 @@
 - **问题**：`4×6×2` 规则三角网格与连续 sin/cos 深度场让每个碎片承担相似视觉重量，复杂但缺少主次和极端事件。
 - **修复**：改为确定性 BSP 不规则分割，以递归停止概率产生大中小块；深度改为中性聚集、中距过渡和三个极端锚点。最大块在不同关卡交替落到最前或最后。
 - **复验**：QA 断言每关页面块 `12–36`、最大/最小面积比 `≥8`、`|Z|<0.5` 聚集比例 25–75%、页面深度跨度 `≥5`。两档错误视角均出现明确主导大块、细小碎片与突然的前后跳跃；正确视角仍无缝。
+
+### P1 — 品牌版式复杂且照片 Logo 语义含混
+
+- **问题**：刊头、hero、编辑主标题、双栏正文、色卡和页脚同时争夺注意力；第二关的大面积默认 U 头像又容易被误读成照片 Logo。
+- **修复**：Logo 改为直接内联平台通用水印 SVG 的两条 path，删除正文、色卡与目录式信息。每关最多保留四类视觉角色；头像只作为边界明确的完整矩形窄带/横带，不抠图、不做圆形徽章。
+- **复验**：01 以黑色水印与红竖栏建立尺度冲突；02 的水印占主体、头像缩到右侧 29%；03 用水印/头像横带/名字三段重量对撞。两档正确视角均能在第一眼识别水印主角。
+
+### P1 — 视角范围过窄且磁吸降低难度
+
+- **问题**：旧 yaw 被限制在目标 `±1.15 rad`，pitch 仅 `±0.58 rad`，高对齐区还会自动磁吸，玩家无需真正理解空间。
+- **修复**：yaw 改为无边界累加，pitch 只保留 `±1.42 rad` 防穿心安全极限；删除磁吸，以最短圆周角计算任意圈数后的目标误差。
+- **复验**：QA 先用真实触控让 yaw 变化超过 `4.5 rad`、pitch 超过 `0.75 rad`，再从自由视角完成三关。
 
 ### P1 — 手机视场裁切完整装置
 

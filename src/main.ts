@@ -80,9 +80,10 @@ async function start() {
   const stage = document.querySelector<HTMLElement>('.lb-stage')
   if (!stage) throw new Error('Stage missing')
 
+  const avatarDataUrl = await resolveAvatarDataUrl(identity.avatarUrl)
   director = new SceneDirector(
     stage,
-    { name: identity.name, platform: 'AlterU' },
+    { name: identity.name, platform: 'AlterU', avatarDataUrl },
     {
       onAlignment: updateAlignment,
       onComplete: completeLevel,
@@ -103,9 +104,10 @@ async function start() {
 
 async function resolveIdentity() {
   const override = params.get('user_name')?.trim()
+  const avatarOverride = params.get('avatar_url')?.trim() || ''
   if (override) {
     identitySource = 'query'
-    return { name: clampName(override) }
+    return { name: clampName(override), avatarUrl: avatarOverride }
   }
   if (isInAigram && telegramId) {
     try {
@@ -116,14 +118,41 @@ async function resolveIdentity() {
       const playerName = response?.data?.name?.trim() || response?.data?.user_name?.trim()
       if (playerName) {
         identitySource = 'player'
-        return { name: clampName(playerName) }
+        return {
+          name: clampName(playerName),
+          avatarUrl: avatarOverride || response?.data?.head_url?.trim() || '',
+        }
       }
     } catch {
       // Outside a responsive platform bridge, retain the explicit brand fallback.
     }
   }
   identitySource = 'brand'
-  return { name: 'AlterU' }
+  return { name: 'AlterU', avatarUrl: avatarOverride }
+}
+
+async function resolveAvatarDataUrl(avatarUrl: string) {
+  if (avatarUrl) {
+    try {
+      const response = await fetch(avatarUrl, { mode: 'cors', credentials: 'omit' })
+      if (!response.ok) throw new Error(`Avatar request failed: ${response.status}`)
+      return await blobToDataUrl(await response.blob())
+    } catch {
+      // Platform avatars without readable CORS headers use the product fallback.
+    }
+  }
+  const fallback = await fetch('./alteru-default-avatar.jpg')
+  if (!fallback.ok) throw new Error('AlterU fallback avatar missing')
+  return blobToDataUrl(await fallback.blob())
+}
+
+function blobToDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error || new Error('Avatar decode failed'))
+    reader.readAsDataURL(blob)
+  })
 }
 
 function renderShell(name: string) {
