@@ -71,24 +71,22 @@ export class IdentityTexture {
     const rows = phrases
       .map(
         (phrase, index) =>
-          `<div style="font-size:${112 - index * 8}px;font-weight:900;line-height:.88;letter-spacing:-.07em;text-align:${index % 2 ? 'right' : 'left'}">${phrase}</div>`,
+          `<span style="font-size:${42 - index * 3}px;font-weight:900;line-height:1;letter-spacing:-.035em">${phrase}</span>`,
       )
       .join('')
     return `<div style="box-sizing:border-box;width:100%;height:100%;padding:86px 74px;background:#f3f0e8;color:#07090d;font-family:Arial Black,Arial,PingFang SC,sans-serif;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden">
       <div style="display:flex;justify-content:space-between;align-items:center;font:700 22px/1 Arial,sans-serif;letter-spacing:.16em">
         <span>LIVING BYLINE / 0${level + 1}</span><span>${platform.toUpperCase()}</span>
       </div>
-      <div style="position:relative;padding:54px 0;border-top:4px solid #07090d;border-bottom:4px solid #07090d">${rows}
-        <div style="position:absolute;left:${level * 12 + 8}%;top:22%;width:62%;height:42%;background:${coral};mix-blend-mode:multiply;transform:rotate(${level * 3 - 3}deg)"></div>
-        <div style="position:absolute;right:4%;bottom:8%;width:34%;height:24%;border:18px solid ${blue};border-radius:50%;mix-blend-mode:multiply"></div>
-      </div>
-      <div>
-        <div style="font-size:${nameSize(this.name)}px;font-weight:900;line-height:.86;letter-spacing:-.07em;overflow-wrap:anywhere">${safeName}</div>
-        <div style="margin-top:24px;display:flex;align-items:center;gap:22px;font:800 31px/1 Arial,sans-serif;letter-spacing:.08em">
+      <div style="position:relative;padding:68px 0 62px;border-top:4px solid #07090d;border-bottom:4px solid #07090d">
+        <div style="position:absolute;right:2%;bottom:12%;width:31%;height:22%;border:16px solid ${blue};border-radius:50%"></div>
+        <div style="position:relative;z-index:2;max-width:92%;font-size:${nameSize(this.name)}px;font-weight:900;line-height:.94;letter-spacing:-.065em;overflow-wrap:anywhere">${safeName}</div>
+        <div style="position:relative;z-index:2;margin-top:28px;display:flex;align-items:center;gap:22px;font:800 31px/1 Arial,sans-serif;letter-spacing:.08em">
           <span style="display:inline-block;width:72px;height:18px;background:${coral}"></span>
           <span>× ${platform.toUpperCase()}</span>
         </div>
       </div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:22px;border-bottom:4px solid #07090d;padding-bottom:28px">${rows}</div>
     </div>`
   }
 
@@ -115,9 +113,9 @@ export class IdentityTexture {
 
 function nameSize(name: string) {
   const count = Array.from(name).length
-  if (count > 14) return 96
-  if (count > 9) return 122
-  return 152
+  if (count > 14) return 82
+  if (count > 9) return 104
+  return 134
 }
 
 function escapeMarkup(value: string) {
@@ -128,4 +126,3 @@ function escapeMarkup(value: string) {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;')
 }
-

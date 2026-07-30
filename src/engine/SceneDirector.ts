@@ -207,49 +207,38 @@ export class SceneDirector {
   }
 
   private buildThreshold() {
-    this.addPiece(new THREE.BoxGeometry(0.42, 5.8, 0.55), [-2.25, -0.05, 0], [0, 0, -0.04], 0)
-    this.addPiece(new THREE.BoxGeometry(0.42, 5.8, 0.55), [2.25, -0.05, 0], [0, 0, 0.04], 1)
-    this.addPiece(new THREE.BoxGeometry(4.9, 0.38, 0.6), [0, 2.65, 0], [0, 0, 0], 2)
     for (let index = 0; index < 5; index += 1) {
+      const offset = index - 2
       this.addPiece(
-        new THREE.BoxGeometry(1.3, 2.85, 0.14),
-        [(index - 2) * 0.78, -0.15 + Math.abs(index - 2) * 0.12, 0.35 + Math.abs(index - 2) * 0.42],
-        [0, (index - 2) * -0.11, (index % 2 ? -1 : 1) * 0.025],
-        index + 3,
-      )
-    }
-  }
-
-  private buildFoldTheatre() {
-    for (let index = 0; index < 8; index += 1) {
-      const phase = index / 7
-      const x = Math.sin(phase * Math.PI * 2.2) * 0.72
-      const y = -1.75 + index * 0.5
-      const z = Math.cos(phase * Math.PI * 2) * 0.62
-      this.addPiece(
-        new THREE.BoxGeometry(4.6 - Math.abs(index - 3.5) * 0.18, 0.58, 0.16),
-        [x, y, z],
-        [(index % 2 ? 1 : -1) * 0.06, Math.sin(phase * Math.PI) * 0.22, (index % 2 ? 1 : -1) * 0.08],
+        new THREE.BoxGeometry(0.68, 4.75 - Math.abs(offset) * 0.12, 0.13),
+        [offset * 0.64, -0.05, 0.22 - Math.abs(offset) * 0.08],
+        [0, offset * -0.035, 0],
         index,
       )
     }
-    this.addPiece(new THREE.CylinderGeometry(1.2, 1.55, 0.32, 48), [0, -2.3, 0.45], [0, 0, 0], 8)
-    this.addPiece(new THREE.TorusGeometry(2.55, 0.09, 12, 72, Math.PI * 1.25), [0, 0, -0.35], [0.1, 0, -0.45], 9)
+    this.addPiece(new THREE.BoxGeometry(3.4, 0.16, 0.18), [0, 2.43, 0], [0, 0, 0], 6)
+    this.addPiece(new THREE.BoxGeometry(3.4, 0.12, 0.18), [0, -2.47, 0], [0, 0, 0], 7)
+  }
+
+  private buildFoldTheatre() {
+    for (let index = 0; index < 7; index += 1) {
+      const offset = index - 3
+      const fold = index % 2 === 0 ? -1 : 1
+      this.addPiece(
+        new THREE.BoxGeometry(0.52, 4.8, 0.1),
+        [offset * 0.49, -0.04, 0.2 - Math.abs(offset) * 0.055],
+        [0, fold * 0.16, 0],
+        index,
+      )
+    }
+    this.addPiece(new THREE.BoxGeometry(3.55, 0.16, 0.2), [0, -2.5, -0.02], [0, 0, 0], 8)
   }
 
   private buildOrbitPress() {
-    this.addPiece(new THREE.SphereGeometry(1.22, 48, 32), [0, 0.05, 0], [0, 0, 0], 0)
-    this.addPiece(new THREE.TorusGeometry(2.25, 0.17, 20, 96), [0, 0.1, 0.1], [1.08, 0.18, 0.2], 1)
-    this.addPiece(new THREE.TorusGeometry(2.85, 0.12, 18, 96), [0, 0.1, 0.2], [0.32, 0.42, 1.2], 2)
-    for (let index = 0; index < 4; index += 1) {
-      const angle = index * Math.PI * 0.5 + 0.4
-      this.addPiece(
-        new THREE.BoxGeometry(1.25, 2.5, 0.13),
-        [Math.cos(angle) * 2.4, Math.sin(angle) * 1.6, -0.3],
-        [0.12 * Math.sin(angle), -angle + Math.PI / 2, angle + 0.2],
-        index + 3,
-      )
-    }
+    this.addPiece(new THREE.BoxGeometry(3.15, 4.65, 0.12), [0, -0.02, 0.35], [0, 0, 0], 0)
+    this.addPiece(new THREE.TorusGeometry(1.72, 0.075, 16, 96), [0, 0.05, -0.5], [0.88, 0.16, 0.18], 1)
+    this.addPiece(new THREE.TorusGeometry(2.02, 0.055, 14, 96), [0, 0.05, -0.62], [0.28, 0.38, 1.08], 2)
+    this.addPiece(new THREE.SphereGeometry(0.34, 32, 24), [1.2, 1.42, 0.74], [0, 0, 0], 3)
   }
 
   private addPiece(
@@ -265,15 +254,15 @@ export class SceneDirector {
       .clone()
       .add(
         new THREE.Vector3(
-          Math.sin(seed * 4.7 + 0.4) * 0.62,
-          Math.cos(seed * 2.9 + 0.8) * 0.48,
-          Math.sin(seed * 3.2) * 0.72,
+          Math.sin(seed * 4.7 + 0.4) * 0.28,
+          Math.cos(seed * 2.9 + 0.8) * 0.22,
+          Math.sin(seed * 3.2) * 0.34,
         ),
       )
     const scatterRotation = new THREE.Euler(
-      rotation[0] + Math.sin(seed * 2.3) * 0.34,
-      rotation[1] + Math.cos(seed * 1.7) * 0.38,
-      rotation[2] + Math.sin(seed * 4.1) * 0.22,
+      rotation[0] + Math.sin(seed * 2.3) * 0.12,
+      rotation[1] + Math.cos(seed * 1.7) * 0.16,
+      rotation[2] + Math.sin(seed * 4.1) * 0.08,
     )
     mesh.userData.piece = {
       targetPosition,
@@ -328,6 +317,7 @@ export class SceneDirector {
     this.projector.updateMatrixWorld()
     this.projectionUniforms.projectorProjection.value.copy(this.projector.projectionMatrix)
     this.projectionUniforms.projectionView.value.copy(this.projector.matrixWorldInverse)
+    this.projectionUniforms.projectorPosition.value.copy(this.projector.position)
   }
 
   private onVisibility = () => {

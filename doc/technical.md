@@ -17,7 +17,7 @@
 - `src/i18n.ts`：`zh/en` 检测与全部 UI 文案。
 - `src/audio.ts`：字钉、关卡完成与终局合成音。
 - `src/engine/IdentityTexture.ts`：用户名与 `ALTERU` 的 HTML→SVG→Canvas 纹理生成及回退。
-- `src/engine/ProjectedMaterial.ts`：世界空间投影坐标、纹理采样、扫描线、边缘光与长按起伏 shader。
+- `src/engine/ProjectedMaterial.ts`：世界空间投影坐标、CanvasTexture 方向、投影机正面裁切、边缘光与触点冲击 shader。
 - `src/engine/SceneDirector.ts`：Three.js 生命周期、三个程序场景、装配进度、完成后相机拖动、离屏暂停与资源释放。
 - `src/shared/runtime/bridge.ts`：canonical Aigram 平台桥。
 - `public/poster-source.webp`：Aigram transit 生成的 1024×1024 raster 海报源。
@@ -35,13 +35,13 @@
 
 `IdentityTexture.render(level)` 为每个场景生成不同排版。输入仅包含转义后的玩家名和固定平台名，不包含跨域照片，因此 SVG `foreignObject` 不需要读取外部资源。纹理尺寸固定为 `1024×1536`，CanvasTexture 使用 sRGB 与线性过滤。
 
-`ProjectedMaterial` 接收独立投影相机的 projection/view matrix，把世界坐标转换成纹理 UV。材质同时应用扫描线、揭示比例、长按法线位移与边缘色；它不依赖游戏 HUD 或场景标题。
+`ProjectedMaterial` 接收独立投影相机的 projection/view matrix 与世界坐标位置，把世界坐标转换成纹理 UV。CanvasTexture 已按 DOM 图像约定上传，因此 shader 不再二次翻转 Y。采样强度乘以表面法线朝向投影机的 facing mask：正面显示排版，侧面和背面回退到深色基础材质，避免镜像字和倒字。材质保留揭示比例、短促触点法线位移与边缘色，不使用高频扫描线。
 
 ### 三个场景与闭环
 
-- 门廊：两根立柱、顶梁和五片纵向印版。
-- 折页剧场：八片横向手风琴折页、底座与开放圆环。
-- 轨道印刷机：双环、球体与四块旋转印版。
+- 门廊：五片等宽纵向印版和上下套准梁，完成后成为一张连续门形海报。
+- 折页剧场：七片不重叠竖向手风琴折页与窄底座，折痕提供空间深度但不遮挡排版。
+- 轨道印刷机：一张正面编辑印版、位于后方的双细环和一个小型轨道标点，完成视角优先保证署名可读。
 
 每个场景的几何保存 target/scatter 两套位置和旋转；三个屏幕空间套准点通过 `setAssemblyProgress()` 把 `alignment` 从 `0` 推进到 `1`，所有物体按同一时间连续插值到套准状态。终局保留 RAF 与相机拖动，但不产生新对象或累积特效。
 

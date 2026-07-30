@@ -6,16 +6,33 @@ Authoritative `platform-layout` evidence keeps the production guest-shell script
 
 | State | 390×844 | 320×568 |
 |---|---|---|
-| Entry + real ghost interaction | `_qa/ui/playability-recheck-entry-platform-layout-390x844.png` | `_qa/ui/playability-recheck-entry-platform-layout-320x568.png` |
-| Level 1 complete | `_qa/ui/playability-recheck-level1-complete-platform-layout-390x844.png` | `_qa/ui/playability-recheck-level1-complete-platform-layout-320x568.png` |
-| Fold Theatre | `_qa/ui/playability-recheck-level2-platform-layout-390x844.png` | `_qa/ui/playability-recheck-level2-platform-layout-320x568.png` |
-| Final Orbit Press | `_qa/ui/playability-recheck-final-platform-layout-390x844.png` | `_qa/ui/playability-recheck-final-platform-layout-320x568.png` |
-| Error / recovery | — | `_qa/ui/playability-recheck-error-platform-layout-320x568.png` |
-| External guest shell | `_qa/ui/playability-recheck-entry-external-guest-390x844.png` | — |
+| Entry + real ghost interaction | `_qa/ui/visual-rework-entry-platform-layout-390x844.png` | `_qa/ui/visual-rework-entry-platform-layout-320x568.png` |
+| Level 1 complete | `_qa/ui/visual-rework-level1-complete-platform-layout-390x844.png` | `_qa/ui/visual-rework-level1-complete-platform-layout-320x568.png` |
+| Fold Theatre | `_qa/ui/visual-rework-level2-platform-layout-390x844.png` | `_qa/ui/visual-rework-level2-platform-layout-320x568.png` |
+| Fold Theatre complete | `_qa/ui/visual-rework-level2-complete-platform-layout-390x844.png` | `_qa/ui/visual-rework-level2-complete-platform-layout-320x568.png` |
+| Final Orbit Press | `_qa/ui/visual-rework-final-platform-layout-390x844.png` | `_qa/ui/visual-rework-final-platform-layout-320x568.png` |
+| Error / recovery | — | `_qa/ui/visual-rework-error-platform-layout-320x568.png` |
+| External guest shell | `_qa/ui/visual-rework-entry-external-guest-390x844.png` | — |
 
 Poster evidence: `public/poster-source.webp` at 1024×1024 and `_qa/ui/poster-thumbnail-160.png`.
 
 ## First-pass findings and fixes
+
+### P0 — 高频扫描线与错误纹理方向破坏了最终画面
+
+- **Evidence**：2026-07-30 Aigram iPhone 实机截图 `6C6880BE-38FC-4256-B71D-E5498FDFC856_1_101_o.jpeg`。
+- **Observation**：shader 主动叠加 `sin(uv.y * 430.0)` 高频扫描线；CanvasTexture 已执行 DOM 图像方向处理，材质又对 `uv.y` 二次翻转，导致文字倒置。投影同时落到背向投影机的表面，产生更多反字。
+- **Impact**：完成态出现明显摩尔纹、脏污和无法阅读的署名，视觉效果本身不成立。
+- **Fix**：删除扫描线；使用原始 projector NDC UV；新增 projector world position uniform，并以法线朝向投影机的 smoothstep mask 限制文字只出现在正面。同步修正 `dom-projection-surface` Skill 资产与验证合同。
+- **Recheck**：三关完成证据中 `平台林思远 / ULTRALONG / × ALTERU` 均正向直立；侧面折痕维持深色或纯纸面，无镜像排版和高频横纹。
+
+### P1 — 宽条几何穿插，完成态仍像随机遮挡
+
+- **Evidence**：同一实机截图中的折页剧场完成态。
+- **Observation**：八片横向宽条、圆环和底座互相穿插，遮住主体排版；完成后只减少散射，没有形成清楚轮廓。
+- **Impact**：玩家无法把结果理解为“完成的署名雕塑”，画面显得廉价、混乱。
+- **Fix**：门廊改为五片等宽竖版；折页剧场改为七片不重叠竖向手风琴；轨道印刷机改为正面编辑印版和后方细环。散射位移、旋转幅度减少约 55–65%，并把用户名移动到纹理中央焦点区。
+- **Recheck**：第二关完成态呈现一张有折痕但连续可读的暖白编辑海报；终局正面印版保持完整，轨道元素不再横穿文字。
 
 ### P0 — 3D 字钉与相机拖动争抢同一输入
 
@@ -61,11 +78,11 @@ Poster evidence: `public/poster-source.webp` at 1024×1024 and `_qa/ui/poster-th
 | Category | Score / 5 | Evidence |
 |---|---:|---|
 | Hierarchy | 4.4 | 用户名、场景主体、三枚字钉和进度按顺序读取 |
-| Coherence | 4.6 | 三关共享投影/印刷材质，同时保持不同空间剪影 |
-| Readability | 4.2 | CJK/长用户名/英文动作与窄屏均通过 |
+| Coherence | 4.7 | 三关共享干净纸面与正面投影合同，同时保持门、折页、轨道剪影 |
+| Readability | 4.7 | CJK/长用户名正向直立；无扫描纹、镜像字、倒字或背面文字 |
 | Game feel | 4.6 | 连续划动、同帧节点压入/路径填充/几何套准、输入模式严格分离 |
-| Asset quality | 4.5 | 原创程序几何与 Aigram raster 海报；无外部模型 |
+| Asset quality | 4.7 | 原创程序几何被收束为可读编辑雕塑；折页与轨道无随机穿插 |
 | Responsive UX | 4.4 | 390×844、320×568、safe-area 与 external guest 双态 |
-| Polish | 4.3 | 完成、错误、重玩和 reduced-motion 均有明确定义 |
+| Polish | 4.6 | 完成、错误、重玩、正面裁切与 reduced-motion 均有明确定义 |
 
-平均分 `4.43/5`，无类别低于 3。2026-07-30 可玩性复审发现的 P0/P1 已通过连续触控重构关闭；首轮两个 P2 继续保持关闭。
+平均分 `4.59/5`，无类别低于 3。2026-07-30 实机截图暴露的扫描线、反字和几何穿插 P0/P1 已通过匹配状态复拍关闭；可玩性复审与首轮 P2 继续保持关闭。

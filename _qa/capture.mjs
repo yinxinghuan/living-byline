@@ -4,7 +4,7 @@ import { chromium } from '/Users/yin/.cache/codex-runtimes/codex-primary-runtime
 
 const root = '/Users/yin/code/games/living-byline'
 const port = '61289'
-const evidenceRound = 'playability-recheck'
+const evidenceRound = 'visual-rework'
 const vite = `${root}/node_modules/vite/bin/vite.js`
 const server = spawn(process.execPath, [vite, '--host', '127.0.0.1', '--port', port], {
   cwd: root,
@@ -129,6 +129,10 @@ for (const [label, width, height] of [
 
   await traceRoute(page)
   await page.waitForFunction(() => window.__livingByline?.complete === true)
+  await page.waitForTimeout(900)
+  await page.screenshot({
+    path: `${root}/_qa/ui/${evidenceRound}-level2-complete-platform-layout-${label}.png`,
+  })
   await page.locator('.lb-complete__action').click()
   await page.waitForFunction(() => window.__livingByline?.level === 2)
   await page.waitForTimeout(900)
