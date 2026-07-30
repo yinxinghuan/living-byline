@@ -17,21 +17,29 @@ type ProfileResponse = {
   }
 }
 
+type DebugState = {
+  yaw: number
+  pitch: number
+  targetYaw: number
+  targetPitch: number
+  angularError: number
+  alignment: number
+  depthSpread: number
+  geometryKinds: string[]
+  objectCount: number
+  projectorAspect: number
+  textureAspect: number
+}
+
 declare global {
   interface Window {
     __livingByline?: {
       level: number
-      pins: number
+      alignment: number
       complete: boolean
       identitySource: 'query' | 'player' | 'brand'
-      activateNext: () => void
+      debug: () => DebugState | undefined
       goToLevel: (level: number) => Promise<void>
-      debug: () => {
-        maxRotation: number
-        depthSpread: number
-        projectorAspect: number
-        textureAspect: number
-      } | undefined
     }
   }
 }
@@ -45,20 +53,14 @@ if (!app) throw new Error('#app missing')
 
 let director: SceneDirector | null = null
 let level = 0
-let pins = 0
+let alignment = 0
 let complete = false
+let nearLock = false
 let ghostTimer = 0
 let ghostEndTimer = 0
 let completionTimer = 0
-let routePointerId: number | null = null
 let identitySource: 'query' | 'player' | 'brand' = 'brand'
 const sound = new SoundEngine()
-
-const routes = [
-  [[18, 38], [78, 50], [34, 76]],
-  [[18, 64], [50, 38], [82, 64]],
-  [[24, 68], [50, 36], [78, 64]],
-] as const
 
 void start()
 
@@ -77,6 +79,9 @@ async function start() {
     stage,
     { name: identity.name, platform: 'AlterU' },
     {
+      onAlignment: updateAlignment,
+      onComplete: completeLevel,
+      onInteraction: stopGhost,
       onError: showError,
     },
   )
@@ -133,23 +138,15 @@ function renderShell(name: string) {
       </header>
       <div class="lb-register lb-register--left" aria-hidden="true"><i></i><i></i></div>
       <div class="lb-register lb-register--right" aria-hidden="true"><i></i><i></i></div>
-      <section class="lb-route" aria-label="${copy.trace}">
-        <svg class="lb-route__line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <path data-route-base pathLength="1"></path>
-          <path data-route-active pathLength="1"></path>
-        </svg>
-        ${[0, 1, 2].map((index) => `
-          <button class="lb-route__node" data-route-node="${index}" type="button" aria-label="${copy.node} ${index + 1}">
-            <span>${index + 1}</span>
-          </button>`).join('')}
-      </section>
-      <section class="lb-progress" aria-label="${copy.touch}">
-        <div class="lb-progress__pins" aria-hidden="true">
-          <i></i><i></i><i></i>
+      <section class="lb-align" aria-label="${copy.touch}">
+        <div class="lb-align__reticle" aria-hidden="true">
+          <i></i><i></i><span data-align-value>00</span>
         </div>
-        <p data-instruction>${copy.touch}</p>
+        <div class="lb-align__copy">
+          <strong data-instruction>${copy.touch}</strong>
+          <span>${copy.drag}</span>
+        </div>
       </section>
-      <p class="lb-hidden-hint">${copy.drag}</p>
       <div class="lb-ghost" aria-hidden="true">
         <i></i>
         <svg viewBox="0 0 24 24">
@@ -180,14 +177,8 @@ function renderShell(name: string) {
 }
 
 function bindUi() {
-  const route = document.querySelector<HTMLElement>('.lb-route')
   const action = document.querySelector<HTMLButtonElement>('.lb-complete__action')
   const retry = document.querySelector<HTMLButtonElement>('.lb-error button')
-  route?.addEventListener('pointerdown', handleRoutePointerDown)
-  route?.addEventListener('pointermove', handleRoutePointerMove)
-  route?.addEventListener('pointerup', handleRoutePointerUp)
-  route?.addEventListener('pointercancel', handleRoutePointerUp)
-  route?.addEventListener('keydown', handleRouteKeydown)
   action?.addEventListener('pointerdown', handleAction)
   action?.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -197,84 +188,57 @@ function bindUi() {
   })
   retry?.addEventListener('pointerdown', () => location.reload())
   window.addEventListener('keydown', handleKeydown)
-  updateRouteUi()
+  updateLevelUi()
+  updateAlignment(0)
 }
 
 function handleKeydown(event: KeyboardEvent) {
-  if (!director) return
-  if (event.key === 'Enter' && !complete) activateRouteStep()
-  if (event.key.toLowerCase() === 'r' && level === 2 && complete) void handleAction()
-}
-
-function handleRoutePointerDown(event: PointerEvent) {
-  if (complete || routePointerId !== null) return
-  stopGhost()
-  routePointerId = event.pointerId
-  const route = event.currentTarget as HTMLElement
-  route.setPointerCapture(event.pointerId)
-  route.classList.add('is-tracing')
-  checkRouteHit(event.clientX, event.clientY)
-}
-
-function handleRoutePointerMove(event: PointerEvent) {
-  if (event.pointerId !== routePointerId || complete) return
-  checkRouteHit(event.clientX, event.clientY)
-}
-
-function handleRoutePointerUp(event: PointerEvent) {
-  if (event.pointerId !== routePointerId) return
-  const route = event.currentTarget as HTMLElement
-  route.classList.remove('is-tracing')
-  if (route.hasPointerCapture(event.pointerId)) route.releasePointerCapture(event.pointerId)
-  routePointerId = null
-}
-
-function handleRouteKeydown(event: KeyboardEvent) {
-  const target = event.target as HTMLElement
-  if (!target.matches('[data-route-node]')) return
-  if ((event.key === 'Enter' || event.key === ' ') && Number(target.dataset.routeNode) === pins) {
-    event.preventDefault()
-    activateRouteStep()
+  if (!director || complete) {
+    if (event.key.toLowerCase() === 'r' && level === 2 && complete) void handleAction()
+    return
   }
+  const step = event.shiftKey ? 0.08 : 0.035
+  if (event.key === 'ArrowLeft') director.nudgeView(step, 0)
+  if (event.key === 'ArrowRight') director.nudgeView(-step, 0)
+  if (event.key === 'ArrowUp') director.nudgeView(0, -step)
+  if (event.key === 'ArrowDown') director.nudgeView(0, step)
 }
 
-function checkRouteHit(clientX: number, clientY: number) {
-  const active = document.querySelector<HTMLElement>(`[data-route-node="${pins}"]`)
-  if (!active) return
-  const rect = active.getBoundingClientRect()
-  const forgiveness = 14
-  if (
-    clientX >= rect.left - forgiveness &&
-    clientX <= rect.right + forgiveness &&
-    clientY >= rect.top - forgiveness &&
-    clientY <= rect.bottom + forgiveness
-  ) {
-    activateRouteStep()
+function updateAlignment(value: number) {
+  alignment = Math.max(0, Math.min(1, value))
+  const game = document.querySelector<HTMLElement>('.lb-game')
+  game?.style.setProperty('--lb-alignment', alignment.toFixed(3))
+  const valueLabel = document.querySelector<HTMLElement>('[data-align-value]')
+  if (valueLabel) valueLabel.textContent = String(Math.round(alignment * 100)).padStart(2, '0')
+  const instruction = document.querySelector<HTMLElement>('[data-instruction]')
+  if (instruction) {
+    instruction.textContent = alignment > 0.9 ? copy.hold : alignment > 0.64 ? copy.near : copy.touch
   }
-}
-
-function activateRouteStep() {
-  if (!director || complete || pins >= 3) return
-  stopGhost()
-  sound.pin(pins)
-  pins += 1
-  director.setAssemblyProgress(pins / 3)
-  navigator.vibrate?.(pins === 3 ? [18, 24, 24] : 12)
-  updatePinUi()
-  updateRouteUi()
+  game?.classList.toggle('is-near', alignment > 0.82 && !complete)
+  if (alignment > 0.84 && !nearLock && !complete) {
+    nearLock = true
+    sound.pin(level)
+    navigator.vibrate?.(10)
+  }
+  if (alignment < 0.72) nearLock = false
   syncQa()
-  if (pins === 3) {
-    complete = true
-    document.querySelector('.lb-game')?.classList.add('is-complete')
-    document.querySelector('.lb-route')?.classList.add('is-complete')
-    updatePinUi()
-    window.clearTimeout(completionTimer)
-    completionTimer = window.setTimeout(() => {
-      sound.complete(level === 2)
-      updateCompleteUi()
-    }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 80 : 520)
-    syncQa()
-  }
+}
+
+function completeLevel(completedLevel: number) {
+  if (complete || completedLevel !== level) return
+  stopGhost()
+  complete = true
+  alignment = 1
+  document.querySelector('.lb-game')?.classList.add('is-complete')
+  const instruction = document.querySelector<HTMLElement>('[data-instruction]')
+  if (instruction) instruction.textContent = copy.view
+  navigator.vibrate?.([18, 28, 24])
+  window.clearTimeout(completionTimer)
+  completionTimer = window.setTimeout(() => {
+    sound.complete(level === 2)
+    updateCompleteUi()
+  }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 80 : 380)
+  syncQa()
 }
 
 async function handleAction() {
@@ -282,8 +246,9 @@ async function handleAction() {
   const panel = document.querySelector<HTMLElement>('.lb-complete')
   panel?.setAttribute('hidden', '')
   complete = false
-  document.querySelector('.lb-game')?.classList.remove('is-complete')
-  pins = 0
+  nearLock = false
+  alignment = 0
+  document.querySelector('.lb-game')?.classList.remove('is-complete', 'is-near')
   if (level < 2) {
     level += 1
     await director.goToLevel(level)
@@ -292,8 +257,7 @@ async function handleAction() {
     await director.restart()
   }
   updateLevelUi()
-  updatePinUi()
-  updateRouteUi()
+  updateAlignment(0)
   scheduleGhost()
   syncQa()
 }
@@ -306,38 +270,6 @@ function updateLevelUi() {
   document.querySelectorAll<HTMLElement>('[data-stamp]').forEach((stamp) => {
     stamp.classList.toggle('is-active', Number(stamp.dataset.stamp) < level)
   })
-  const instruction = document.querySelector<HTMLElement>('[data-instruction]')
-  if (instruction) instruction.textContent = copy.touch
-}
-
-function updatePinUi() {
-  document.querySelectorAll<HTMLElement>('.lb-progress__pins i').forEach((pin, index) => {
-    pin.classList.toggle('is-active', index < pins)
-  })
-  const instruction = document.querySelector<HTMLElement>('[data-instruction]')
-  if (instruction) {
-    instruction.textContent = complete ? copy.view : `${copy.touch} · ${pins}/3`
-  }
-}
-
-function updateRouteUi() {
-  const points = routes[level]
-  const path = points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x} ${y}`).join(' ')
-  document.querySelectorAll<SVGPathElement>('[data-route-base], [data-route-active]').forEach((line) => {
-    line.setAttribute('d', path)
-  })
-  const activeLine = document.querySelector<SVGPathElement>('[data-route-active]')
-  if (activeLine) activeLine.style.strokeDasharray = `${pins / 3} 1`
-  document.querySelectorAll<HTMLElement>('[data-route-node]').forEach((node, index) => {
-    const [x, y] = points[index]
-    node.style.setProperty('--lb-node-x', `${x}%`)
-    node.style.setProperty('--lb-node-y', `${y}%`)
-    node.classList.toggle('is-active', index < pins)
-    node.classList.toggle('is-current', index === pins && !complete)
-    node.setAttribute('aria-current', index === pins && !complete ? 'step' : 'false')
-    node.tabIndex = index === pins && !complete ? 0 : -1
-  })
-  document.querySelector('.lb-route')?.classList.toggle('is-complete', complete)
 }
 
 function updateCompleteUi() {
@@ -357,45 +289,43 @@ function scheduleGhost() {
   if (baseline) return
   ghostTimer = window.setTimeout(() => {
     document.querySelector('.lb-ghost')?.classList.add('is-showing')
-    document.querySelector('.lb-route')?.classList.add('is-previewing')
     director?.setGhostPreview(true)
-    ghostEndTimer = window.setTimeout(stopGhost, 2600)
-  }, 720)
+    ghostEndTimer = window.setTimeout(stopGhost, 2400)
+  }, 760)
 }
 
 function stopGhost() {
   window.clearTimeout(ghostTimer)
   window.clearTimeout(ghostEndTimer)
   document.querySelector('.lb-ghost')?.classList.remove('is-showing')
-  document.querySelector('.lb-route')?.classList.remove('is-previewing')
   director?.setGhostPreview(false)
 }
 
 function showError(error: Error) {
   console.error(error)
   document.querySelector<HTMLElement>('.lb-error')?.removeAttribute('hidden')
-  document.querySelector<HTMLElement>('.lb-progress')?.setAttribute('hidden', '')
+  document.querySelector<HTMLElement>('.lb-align')?.setAttribute('hidden', '')
   document.querySelector('.lb-boot')?.classList.add('is-ready')
 }
 
 function syncQa() {
   window.__livingByline = {
     level,
-    pins,
+    alignment,
     complete,
     identitySource,
-    activateNext: activateRouteStep,
     debug: () => director?.getDebugState(),
     goToLevel: async (nextLevel: number) => {
       if (!director) return
       level = Math.max(0, Math.min(2, nextLevel))
-      pins = 0
       complete = false
-      document.querySelector('.lb-game')?.classList.remove('is-complete')
+      nearLock = false
+      alignment = 0
+      document.querySelector('.lb-game')?.classList.remove('is-complete', 'is-near')
+      document.querySelector<HTMLElement>('.lb-complete')?.setAttribute('hidden', '')
       await director.goToLevel(level)
       updateLevelUi()
-      updatePinUi()
-      updateRouteUi()
+      updateAlignment(0)
       syncQa()
     },
   }

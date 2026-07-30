@@ -4,7 +4,7 @@ import { chromium } from '/Users/yin/.cache/codex-runtimes/codex-primary-runtime
 
 const root = '/Users/yin/code/games/living-byline'
 const port = '61289'
-const evidenceRound = 'flat-print-rework'
+const evidenceRound = 'camera-lock-rework'
 const vite = `${root}/node_modules/vite/bin/vite.js`
 const server = spawn(process.execPath, [vite, '--host', '127.0.0.1', '--port', port], {
   cwd: root,
@@ -16,53 +16,58 @@ await new Promise((resolve) => setTimeout(resolve, 1200))
 const browser = await chromium.launch({ headless: true })
 const failures = []
 
-async function traceRoute(page) {
-  const points = await page.locator('[data-route-node]').evaluateAll((nodes) =>
-    nodes.map((node) => {
-      const rect = node.getBoundingClientRect()
-      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
-    }),
-  )
+async function dragToTarget(page) {
+  const before = await page.evaluate(() => window.__livingByline?.debug())
+  if (!before) throw new Error('Missing debug state before drag')
+  const viewport = page.viewportSize()
+  const startX = Math.round((viewport?.width || 390) * 0.5)
+  const startY = Math.round((viewport?.height || 844) * 0.52)
+  const deltaX = -(before.targetYaw - before.yaw) / 0.006
+  const deltaY = (before.targetPitch - before.pitch) / 0.0048
   const client = await page.context().newCDPSession(page)
   await client.send('Input.dispatchTouchEvent', {
     type: 'touchStart',
-    touchPoints: [{ x: points[0].x, y: points[0].y, id: 1 }],
+    touchPoints: [{ x: startX, y: startY, id: 1 }],
   })
-  for (let index = 1; index < points.length; index += 1) {
-    const from = points[index - 1]
-    const to = points[index]
-    for (let step = 1; step <= 10; step += 1) {
-      await client.send('Input.dispatchTouchEvent', {
-        type: 'touchMove',
-        touchPoints: [{
-          x: from.x + (to.x - from.x) * (step / 10),
-          y: from.y + (to.y - from.y) * (step / 10),
-          id: 1,
-        }],
-      })
-      await page.waitForTimeout(12)
-    }
+  for (let step = 1; step <= 18; step += 1) {
+    await client.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{
+        x: startX + deltaX * (step / 18),
+        y: startY + deltaY * (step / 18),
+        id: 1,
+      }],
+    })
+    await page.waitForTimeout(18)
   }
   await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   await client.detach()
+  return before
 }
 
-async function assertFlatPrint(page, label, stage) {
+async function assertScene(page, label, stage, before) {
   const debug = await page.evaluate(() => window.__livingByline?.debug())
   if (!debug) {
     failures.push(`${label} ${stage}: missing projection debug state`)
     return
   }
   if (Math.abs(debug.projectorAspect - debug.textureAspect) > 0.0001) {
-    failures.push(
-      `${label} ${stage}: projector aspect ${debug.projectorAspect} != texture ${debug.textureAspect}`,
-    )
+    failures.push(`${label} ${stage}: projector aspect does not match source texture`)
   }
-  if (debug.maxRotation > 0.025) {
-    failures.push(`${label} ${stage}: completed page rotation ${debug.maxRotation}`)
+  if (debug.depthSpread < 1.2) {
+    failures.push(`${label} ${stage}: scene depth spread ${debug.depthSpread} is too flat`)
   }
-  if (debug.depthSpread > 0.025) {
-    failures.push(`${label} ${stage}: completed page depth spread ${debug.depthSpread}`)
+  if (!debug.geometryKinds.includes('SphereGeometry') || !debug.geometryKinds.includes('TorusGeometry')) {
+    failures.push(`${label} ${stage}: scene lacks sphere or arch geometry`)
+  }
+  if (debug.objectCount < 12) {
+    failures.push(`${label} ${stage}: only ${debug.objectCount} scene objects`)
+  }
+  if (before && Math.abs(before.yaw - debug.yaw) < 0.25) {
+    failures.push(`${label} ${stage}: camera did not rotate materially`)
+  }
+  if (stage.includes('complete') && debug.angularError > 0.035) {
+    failures.push(`${label} ${stage}: completed with angular error ${debug.angularError}`)
   }
 }
 
@@ -91,19 +96,14 @@ for (const [label, width, height] of [
               const payload = JSON.parse(atob(message.slice('callAPI-'.length)))
               setTimeout(() => {
                 const callback = window[`__aigram_cb_${payload.request_id.replaceAll('-', '_')}`]
-                callback?.(
-                  JSON.stringify({
-                    request_id: payload.request_id,
-                    success: true,
-                    data: {
-                      retcode: 0,
-                      data: {
-                        name: '平台林思远ULTRALONG',
-                        head_url: 'https://different-origin.invalid/no-cors-avatar.jpg',
-                      },
-                    },
-                  }),
-                )
+                callback?.(JSON.stringify({
+                  request_id: payload.request_id,
+                  success: true,
+                  data: {
+                    retcode: 0,
+                    data: { name: '平台林思远ULTRALONG', head_url: '' },
+                  },
+                }))
               }, 24)
             },
           },
@@ -124,71 +124,32 @@ for (const [label, width, height] of [
   const metrics = await page.evaluate(() => ({
     width: document.documentElement.scrollWidth,
     viewport: innerWidth,
-    ready: document.body.dataset.visualReady,
   }))
-  if (metrics.width > metrics.viewport) {
-    failures.push(`${label}: horizontal overflow ${metrics.width} > ${metrics.viewport}`)
-  }
+  if (metrics.width > metrics.viewport) failures.push(`${label}: horizontal overflow`)
+  await assertScene(page, label, 'entry')
   await page.screenshot({
     path: `${root}/_qa/ui/${evidenceRound}-entry-platform-layout-${label}.png`,
   })
 
-  await traceRoute(page)
-  await page.waitForFunction(() => window.__livingByline?.complete === true)
-  await page.waitForTimeout(900)
-  await assertFlatPrint(page, label, 'level1')
-  await page.screenshot({
-    path: `${root}/_qa/ui/${evidenceRound}-level1-complete-platform-layout-${label}.png`,
-  })
-
-  await page.locator('.lb-complete__action').click()
-  await page.waitForFunction(() => window.__livingByline?.level === 1)
-  await page.waitForTimeout(900)
-  await page.screenshot({
-    path: `${root}/_qa/ui/${evidenceRound}-level2-platform-layout-${label}.png`,
-  })
-
-  await traceRoute(page)
-  await page.waitForFunction(() => window.__livingByline?.complete === true)
-  await page.waitForTimeout(900)
-  await assertFlatPrint(page, label, 'level2')
-  await page.screenshot({
-    path: `${root}/_qa/ui/${evidenceRound}-level2-complete-platform-layout-${label}.png`,
-  })
-  await page.locator('.lb-complete__action').click()
-  await page.waitForFunction(() => window.__livingByline?.level === 2)
-  await page.waitForTimeout(900)
-  await page.screenshot({
-    path: `${root}/_qa/ui/${evidenceRound}-level3-platform-layout-${label}.png`,
-  })
-
-  await traceRoute(page)
-  await page.waitForFunction(() => window.__livingByline?.complete === true)
-  await page.waitForTimeout(900)
-  await assertFlatPrint(page, label, 'level3')
-  await page.screenshot({
-    path: `${root}/_qa/ui/${evidenceRound}-final-platform-layout-${label}.png`,
-  })
+  for (let stageLevel = 0; stageLevel < 3; stageLevel += 1) {
+    if (stageLevel > 0) {
+      await page.locator('.lb-complete__action').click()
+      await page.waitForFunction((expected) => window.__livingByline?.level === expected, stageLevel)
+      await page.waitForTimeout(700)
+      await page.screenshot({
+        path: `${root}/_qa/ui/${evidenceRound}-level${stageLevel + 1}-entry-platform-layout-${label}.png`,
+      })
+    }
+    const before = await dragToTarget(page)
+    await page.waitForFunction(() => window.__livingByline?.complete === true, undefined, { timeout: 5000 })
+    await page.waitForTimeout(550)
+    await assertScene(page, label, `level${stageLevel + 1}-complete`, before)
+    await page.screenshot({
+      path: `${root}/_qa/ui/${evidenceRound}-level${stageLevel + 1}-complete-platform-layout-${label}.png`,
+    })
+  }
   await page.close()
 }
-
-const external = await browser.newPage({
-  viewport: { width: 390, height: 844 },
-  deviceScaleFactor: 1,
-  isMobile: true,
-  hasTouch: true,
-})
-await external.goto(`http://127.0.0.1:${port}/?user_name=AlterU`, {
-  waitUntil: 'domcontentloaded',
-})
-await external.waitForFunction(() => document.body.dataset.visualReady === 'true')
-await external.waitForTimeout(900)
-const bannerVisible = await external.locator('#alteru-guest-banner').isVisible().catch(() => false)
-if (!bannerVisible) failures.push('external-guest: banner not visible')
-await external.screenshot({
-  path: `${root}/_qa/ui/${evidenceRound}-entry-external-guest-390x844.png`,
-})
-await external.close()
 
 const errorPage = await browser.newPage({
   viewport: { width: 320, height: 568 },
