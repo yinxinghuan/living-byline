@@ -6,6 +6,7 @@ export type ProjectionUniforms = {
   projectorPosition: { value: THREE.Vector3 }
   pageTexture: { value: THREE.Texture }
   reveal: { value: number }
+  resolve: { value: number }
   boost: { value: number }
   time: { value: number }
   accent: { value: THREE.Color }
@@ -21,6 +22,7 @@ export function createProjectionMaterial(
     projectorPosition: { value: new THREE.Vector3() },
     pageTexture: { value: texture },
     reveal: { value: 0.14 },
+    resolve: { value: 0 },
     boost: { value: 0 },
     time: { value: 0 },
     accent: { value: new THREE.Color('#ff5b4d') },
@@ -50,6 +52,7 @@ export function createProjectionMaterial(
       uniform sampler2D pageTexture;
       uniform vec3 projectorPosition;
       uniform float reveal;
+      uniform float resolve;
       uniform float boost;
       uniform float time;
       uniform vec3 accent;
@@ -65,7 +68,8 @@ export function createProjectionMaterial(
         float facing = smoothstep(0.08, 0.34, dot(normalize(vNormalWorld), toProjector));
         float edge = pow(1.0 - abs(dot(normalize(vNormalWorld), normalize(cameraPosition - vWorld))), 2.2);
         vec3 base = vec3(${color.r.toFixed(4)}, ${color.g.toFixed(4)}, ${color.b.toFixed(4)});
-        float projection = inside * facing * (0.08 + reveal * 0.92);
+        float resolvedFacing = mix(facing, 1.0, smoothstep(0.72, 0.98, resolve));
+        float projection = inside * resolvedFacing * (0.08 + reveal * 0.92);
         float light = 0.62 + max(dot(normalize(vNormalWorld), normalize(vec3(-0.4, 0.8, 0.65))), 0.0) * 0.42;
         vec3 shadedBase = base * light;
         shadedBase += accent * edge * (0.07 + boost * 0.12);

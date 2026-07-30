@@ -29,7 +29,9 @@
 
 ### 投影与场景
 
-纹理固定为 `1024×1536`。shader 由投影相机矩阵生成 UV，不翻转 Y；法线朝向投影机的 facing mask 阻止背面反字；投影色不乘表面光照，基础材质仍通过光照与边缘表现体积。三关分别使用 Box/Sphere/Torus/Cylinder 等几何，root 预先朝向各自投影姿态，确保正确观察角度时排版连续。
+纹理固定为 `1024×1536`，DOM 页面由刊头、双色 hero、用户名、期号、编辑标题、双栏正文、色卡与页脚组成。shader 不翻转 Y；过程态用 facing mask 表现侧面，`resolve` 在对齐度 `0.72–0.98` 间把可见表面恢复为同一页面像素。
+
+三关共同使用 48 个 ExtrudeGeometry 三角体覆盖 `3.3×4.95` 页面区域；每片根据深度按 `(11.5-z)/11.5` 做透视缩放，并以 3.5% 质心外扩消除子像素缝。三关深度场约为 `±1.62 / ±1.86 / ±2.05`，再叠加 Sphere/Torus/Cylinder/Cone/多面体。
 
 ### 性能、身份与恢复
 
@@ -39,7 +41,7 @@ DPR 在窄屏限制为 `1.25`，其他手机最多 `1.65`；IntersectionObserver
 
 - **新增关卡**：在 `LEVEL_POSES` 增加目标/起始姿态，在 `buildLevel()` 注册新的固定几何构建器。
 - **调手感**：修改 pointer 灵敏度、`0.13` 磁吸半径、`0.032` 锁定阈值与 `380ms` 保持时间。
-- **换排版**：编辑 `IdentityTexture.markup()`，保持 `1024×1536` 与无跨域像素依赖。
-- **换材质/几何**：编辑三个 `build*()`；投影承载体继续使用共享 `projectedMaterial`。
+- **换排版**：编辑 `IdentityTexture.markup()` 的 editions 数据与 editorial grid，保持 `1024×1536` 与无跨域像素依赖。
+- **换材质/几何**：编辑 `buildDepthMosaic()` 的深度函数或三个 `build*()` 的空间物件；投影承载体继续使用共享 `projectedMaterial`。
 - **改 shader**：编辑 `ProjectedMaterial.ts`，保持固定 projector matrix、正面 mask 与不翻转 Y 的合同。
 - **改 UI/声音/平台**：分别编辑 `style.css`、`audio.ts`、`src/shared/runtime/bridge.ts`。

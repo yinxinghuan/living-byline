@@ -4,7 +4,7 @@ import { chromium } from '/Users/yin/.cache/codex-runtimes/codex-primary-runtime
 
 const root = '/Users/yin/code/games/living-byline'
 const port = '61289'
-const evidenceRound = 'camera-lock-rework'
+const evidenceRound = 'depth-editorial-rework'
 const vite = `${root}/node_modules/vite/bin/vite.js`
 const server = spawn(process.execPath, [vite, '--host', '127.0.0.1', '--port', port], {
   cwd: root,
@@ -54,13 +54,17 @@ async function assertScene(page, label, stage, before) {
   if (Math.abs(debug.projectorAspect - debug.textureAspect) > 0.0001) {
     failures.push(`${label} ${stage}: projector aspect does not match source texture`)
   }
-  if (debug.depthSpread < 1.2) {
+  if (debug.depthSpread < 3.2) {
     failures.push(`${label} ${stage}: scene depth spread ${debug.depthSpread} is too flat`)
   }
-  if (!debug.geometryKinds.includes('SphereGeometry') || !debug.geometryKinds.includes('TorusGeometry')) {
-    failures.push(`${label} ${stage}: scene lacks sphere or arch geometry`)
+  if (
+    !debug.geometryKinds.includes('ExtrudeGeometry') ||
+    !debug.geometryKinds.includes('SphereGeometry') ||
+    !debug.geometryKinds.includes('TorusGeometry')
+  ) {
+    failures.push(`${label} ${stage}: scene lacks triangle, sphere, or arch geometry`)
   }
-  if (debug.objectCount < 12) {
+  if (debug.objectCount < 55) {
     failures.push(`${label} ${stage}: only ${debug.objectCount} scene objects`)
   }
   if (before && Math.abs(before.yaw - debug.yaw) < 0.25) {
@@ -68,6 +72,9 @@ async function assertScene(page, label, stage, before) {
   }
   if (stage.includes('complete') && debug.angularError > 0.035) {
     failures.push(`${label} ${stage}: completed with angular error ${debug.angularError}`)
+  }
+  if (before && before.transformChecksum !== debug.transformChecksum) {
+    failures.push(`${label} ${stage}: scene transforms changed during viewpoint alignment`)
   }
 }
 

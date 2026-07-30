@@ -61,32 +61,72 @@ export class IdentityTexture {
   private markup(level: number) {
     const safeName = escapeMarkup(this.name)
     const platform = escapeMarkup(this.platform)
-    const phrases = [
-      ['A NAME', 'BECOMES', 'A PLACE'],
-      ['FOLD THE', 'DISTANCE', 'INTO TYPE'],
-      ['PRINTED', 'IN ORBIT', 'STILL YOURS'],
+    const editions = [
+      {
+        accent: '#ff5b4d',
+        second: '#3156ff',
+        number: '01',
+        kicker: 'THE ARCHIVE OF A LIVING NAME',
+        headline: 'A NAME BECOMES A PLACE',
+        body: 'Identity is not a label fixed to one surface. It changes with distance, angle and the person who is looking.',
+        note: 'TURN THE ROOM / HOLD THE VIEW / READ THE WHOLE',
+      },
+      {
+        accent: '#3156ff',
+        second: '#ff5b4d',
+        number: '02',
+        kicker: 'TYPE / DISTANCE / MEMORY',
+        headline: 'FOLD SPACE INTO LANGUAGE',
+        body: 'Every plane carries a fragment. Perspective edits the fragments into one continuous voice.',
+        note: 'NEAR AND FAR / EDGE AND FACE / ONE COMPOSITION',
+      },
+      {
+        accent: '#ff5b4d',
+        second: '#3156ff',
+        number: '03',
+        kicker: 'AN ORBIT AROUND IDENTITY',
+        headline: 'STILL MOVING. STILL YOURS.',
+        body: 'The layout survives every interruption. At one precise coordinate the system remembers how to speak.',
+        note: 'PROJECTED / ALIGNED / PRINTED WITH ALTERU',
+      },
     ][level]
-    const coral = level === 1 ? '#4d7cff' : '#ff5b4d'
-    const blue = level === 1 ? '#ff5b4d' : '#4d7cff'
-    const rows = phrases
-      .map(
-        (phrase, index) =>
-          `<span style="font-size:${42 - index * 3}px;font-weight:900;line-height:1;letter-spacing:-.035em">${phrase}</span>`,
-      )
-      .join('')
-    return `<div style="box-sizing:border-box;width:100%;height:100%;padding:86px 74px;background:#f3f0e8;color:#07090d;font-family:Arial Black,Arial,PingFang SC,sans-serif;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;font:700 22px/1 Arial,sans-serif;letter-spacing:.16em">
-        <span>LIVING BYLINE / 0${level + 1}</span><span>${platform.toUpperCase()}</span>
-      </div>
-      <div style="position:relative;padding:68px 0 62px;border-top:4px solid #07090d;border-bottom:4px solid #07090d">
-        <div style="position:absolute;right:2%;bottom:12%;width:31%;height:22%;border:16px solid ${blue};border-radius:50%"></div>
-        <div style="position:relative;z-index:2;max-width:92%;font-size:${nameSize(this.name)}px;font-weight:900;line-height:.94;letter-spacing:-.065em;overflow-wrap:anywhere">${safeName}</div>
-        <div style="position:relative;z-index:2;margin-top:28px;display:flex;align-items:center;gap:22px;font:800 31px/1 Arial,sans-serif;letter-spacing:.08em">
-          <span style="display:inline-block;width:72px;height:18px;background:${coral}"></span>
-          <span>× ${platform.toUpperCase()}</span>
+    return `<div style="box-sizing:border-box;width:100%;height:100%;padding:58px 58px 54px;background:#f3f0e8;color:#07090d;font-family:Arial,Helvetica,PingFang SC,sans-serif;display:grid;grid-template-rows:auto 420px 1fr auto;gap:34px;overflow:hidden">
+      <header style="display:grid;grid-template-columns:1fr auto;gap:24px;align-items:start;border-top:8px solid #07090d;padding-top:20px">
+        <div style="font:900 21px/1 Arial,sans-serif;letter-spacing:.19em">LIVING BYLINE®</div>
+        <div style="text-align:right;font:700 19px/1.35 Arial,sans-serif;letter-spacing:.12em">${platform.toUpperCase()}<br/>ISSUE ${editions.number}</div>
+      </header>
+      <section style="position:relative;display:grid;grid-template-columns:64% 36%;overflow:hidden;background:${editions.accent}">
+        <div style="position:relative;z-index:2;display:flex;flex-direction:column;justify-content:space-between;padding:34px 30px 30px;color:#f3f0e8">
+          <span style="font:800 18px/1 Arial,sans-serif;letter-spacing:.16em">${editions.kicker}</span>
+          <strong style="max-width:640px;font:900 ${nameSize(this.name)}px/.82 Arial Black,Arial,PingFang SC,sans-serif;letter-spacing:-.075em;overflow-wrap:anywhere">${safeName}</strong>
+          <span style="font:900 25px/1 Arial,sans-serif;letter-spacing:.08em">× ${platform.toUpperCase()}</span>
         </div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:22px;border-bottom:4px solid #07090d;padding-bottom:28px">${rows}</div>
+        <div style="position:relative;background:${editions.second}">
+          <div style="position:absolute;left:-106px;top:62px;width:246px;height:246px;border:30px solid #f3f0e8;border-radius:50%"></div>
+          <div style="position:absolute;right:20px;bottom:-25px;color:#07090d;font:900 230px/.8 Arial Black,Arial,sans-serif;letter-spacing:-.12em">${editions.number}</div>
+        </div>
+      </section>
+      <main style="display:grid;grid-template-columns:38% 1fr;gap:34px;border-top:4px solid #07090d;padding-top:30px">
+        <div style="display:flex;flex-direction:column;justify-content:space-between;border-right:4px solid #07090d;padding-right:28px">
+          <span style="font:800 18px/1.3 Arial,sans-serif;letter-spacing:.14em">ALTERU EDITORIAL<br/>IDENTITY STUDY<br/>VOL. ${editions.number}</span>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+            <i style="height:62px;background:${editions.accent}"></i>
+            <i style="height:62px;background:#07090d"></i>
+            <i style="height:62px;background:${editions.second}"></i>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;justify-content:space-between;min-width:0">
+          <h1 style="margin:0;font:900 92px/.86 Arial Black,Arial,PingFang SC,sans-serif;letter-spacing:-.07em">${editions.headline}</h1>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;padding-top:28px;border-top:3px solid #07090d">
+            <p style="margin:0;font:700 24px/1.28 Arial,sans-serif">${editions.body}</p>
+            <p style="margin:0;font:500 20px/1.42 Arial,sans-serif">A continuous composition can live on many surfaces. The image is complete only when movement, depth and attention share the same point of view.</p>
+          </div>
+        </div>
+      </main>
+      <footer style="display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end;border-top:8px solid #07090d;padding-top:18px">
+        <strong style="font:900 22px/1 Arial,sans-serif;letter-spacing:.12em">${editions.note}</strong>
+        <span style="font:700 18px/1 Arial,sans-serif;letter-spacing:.14em">${editions.number} / 03</span>
+      </footer>
     </div>`
   }
 
@@ -94,16 +134,20 @@ export class IdentityTexture {
     const ctx = this.context
     ctx.fillStyle = '#f3f0e8'
     ctx.fillRect(0, 0, this.width, this.height)
-    ctx.fillStyle = '#07090d'
-    ctx.font = '900 124px Arial'
-    ctx.fillText(this.name.slice(0, 12), 72, 1020, 880)
-    ctx.font = '800 48px Arial'
-    ctx.fillText(`× ${this.platform.toUpperCase()}`, 76, 1110)
     ctx.fillStyle = level === 1 ? '#4d7cff' : '#ff5b4d'
-    ctx.fillRect(72, 260, 720, 420)
+    ctx.fillRect(58, 150, 908, 420)
+    ctx.fillStyle = level === 1 ? '#ff5b4d' : '#3156ff'
+    ctx.fillRect(700, 150, 266, 420)
+    ctx.fillStyle = '#f3f0e8'
+    ctx.font = '900 118px Arial'
+    ctx.fillText(this.name.slice(0, 12), 82, 440, 610)
+    ctx.font = '800 38px Arial'
+    ctx.fillText(`× ${this.platform.toUpperCase()}`, 84, 520)
     ctx.fillStyle = '#07090d'
-    ctx.font = '900 92px Arial'
-    ctx.fillText(['A NAME', 'FOLD TYPE', 'IN ORBIT'][level], 92, 480)
+    ctx.font = '900 86px Arial'
+    ctx.fillText(['A NAME BECOMES', 'FOLD SPACE INTO', 'STILL MOVING.'][level], 70, 850, 880)
+    ctx.font = '700 34px Arial'
+    ctx.fillText('IDENTITY / DISTANCE / ONE PRECISE VIEW', 70, 1410)
   }
 
   dispose() {
@@ -113,9 +157,9 @@ export class IdentityTexture {
 
 function nameSize(name: string) {
   const count = Array.from(name).length
-  if (count > 14) return 82
-  if (count > 9) return 104
-  return 134
+  if (count > 14) return 70
+  if (count > 9) return 88
+  return 112
 }
 
 function escapeMarkup(value: string) {

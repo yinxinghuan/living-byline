@@ -6,13 +6,13 @@
 
 | State | 390×844 | 320×568 |
 |---|---|---|
-| 拱门庭院错误视角 | `_qa/ui/camera-lock-rework-entry-platform-layout-390x844.png` | `_qa/ui/camera-lock-rework-entry-platform-layout-320x568.png` |
-| 拱门庭院正确视角 | `_qa/ui/camera-lock-rework-level1-complete-platform-layout-390x844.png` | `_qa/ui/camera-lock-rework-level1-complete-platform-layout-320x568.png` |
-| 折面剧场错误视角 | `_qa/ui/camera-lock-rework-level2-entry-platform-layout-390x844.png` | `_qa/ui/camera-lock-rework-level2-entry-platform-layout-320x568.png` |
-| 折面剧场正确视角 | `_qa/ui/camera-lock-rework-level2-complete-platform-layout-390x844.png` | `_qa/ui/camera-lock-rework-level2-complete-platform-layout-320x568.png` |
-| 轨道雕塑错误视角 | `_qa/ui/camera-lock-rework-level3-entry-platform-layout-390x844.png` | `_qa/ui/camera-lock-rework-level3-entry-platform-layout-320x568.png` |
-| 轨道雕塑正确视角 | `_qa/ui/camera-lock-rework-level3-complete-platform-layout-390x844.png` | `_qa/ui/camera-lock-rework-level3-complete-platform-layout-320x568.png` |
-| 错误恢复 | — | `_qa/ui/camera-lock-rework-error-platform-layout-320x568.png` |
+| 拱门庭院错误视角 | `_qa/ui/depth-editorial-rework-entry-platform-layout-390x844.png` | `_qa/ui/depth-editorial-rework-entry-platform-layout-320x568.png` |
+| 拱门庭院正确视角 | `_qa/ui/depth-editorial-rework-level1-complete-platform-layout-390x844.png` | `_qa/ui/depth-editorial-rework-level1-complete-platform-layout-320x568.png` |
+| 折面剧场错误视角 | `_qa/ui/depth-editorial-rework-level2-entry-platform-layout-390x844.png` | `_qa/ui/depth-editorial-rework-level2-entry-platform-layout-320x568.png` |
+| 折面剧场正确视角 | `_qa/ui/depth-editorial-rework-level2-complete-platform-layout-390x844.png` | `_qa/ui/depth-editorial-rework-level2-complete-platform-layout-320x568.png` |
+| 轨道雕塑错误视角 | `_qa/ui/depth-editorial-rework-level3-entry-platform-layout-390x844.png` | `_qa/ui/depth-editorial-rework-level3-entry-platform-layout-320x568.png` |
+| 轨道雕塑正确视角 | `_qa/ui/depth-editorial-rework-level3-complete-platform-layout-390x844.png` | `_qa/ui/depth-editorial-rework-level3-complete-platform-layout-320x568.png` |
+| 错误恢复 | — | `_qa/ui/depth-editorial-rework-error-platform-layout-320x568.png` |
 
 ## 本轮发现与修复
 
@@ -26,8 +26,14 @@
 ### P1 — 3D 场景退化成薄板
 
 - **问题**：旧构图主要由少量 PlaneGeometry 竖条组成，球体、厚度、建筑轮廓和空间遮挡不足。
-- **修复**：三关分别引入 7 根厚柱/双拱/3 球、9 折面/锥柱/双球、20 单元/双环/中心轴；外部均保留双空间轨道。
-- **复验**：每关 `depthSpread > 1.2`、`objectCount >= 12`，且同时包含 SphereGeometry 与 TorusGeometry。错误视角截图清楚显示侧面厚度与前后遮挡。
+- **修复**：用 48 个带厚度的三角体覆盖版面，三关最大深度范围提高到约 `3.24 / 3.72 / 4.10`；再加入球体、圆环、圆柱/圆锥和多面体。
+- **复验**：每关 `objectCount >= 55`，同时包含 ExtrudeGeometry、SphereGeometry 与 TorusGeometry。错误视角截图清楚显示三角断面、暗侧面与多层遮挡。
+
+### P0 — 正确视角仍有缝隙、阴影，版式过于单调
+
+- **问题**：旧页面只有用户名、圆环和三行短语；不同深度 Box 的投影边缘无法无缝覆盖，正确视角仍像有阴影的几块板。
+- **修复**：三角体按 `(cameraRadius-z)/cameraRadius` 做透视补偿，并向质心外扩 3.5% 覆盖子像素缝；shader 新增 `resolve`，接近完成时取消 facing 明暗。页面重做为刊头、红蓝 hero、超大用户名、期号、编辑标题、栏目、小标题、双栏正文、色卡与页脚。
+- **复验**：六张正确视角证据均呈现连续矩形版式，没有发丝缝、模型阴影或字体变形；错误视角仍保留相同 mesh 的强烈空间破碎。
 
 ### P1 — 手机视场裁切完整装置
 
@@ -46,4 +52,4 @@
 - 无横向 DOM 溢出；长用户名身份来源为 `player`。
 - 3D 景深、球体/拱门类型、对象数、投影比例和完成角误差均有机械断言。
 - 完成前后场景不重建、不共面化、不淡出装饰；唯一变化是观察相机姿态。
-- 视觉结论：核心玩法与参考机制一致，三关剪影可区分，当前版本可发布。
+- 视觉结论：错误视角的空间复杂度与正确视角的平面稿完成度均达到发布标准。

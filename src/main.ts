@@ -27,6 +27,7 @@ type DebugState = {
   depthSpread: number
   geometryKinds: string[]
   objectCount: number
+  transformChecksum: number
   projectorAspect: number
   textureAspect: number
 }

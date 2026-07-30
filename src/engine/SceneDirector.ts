@@ -21,7 +21,7 @@ const PAGE_ASPECT = 2 / 3
 const CAMERA_RADIUS = 11.5
 const PROJECTOR_FOV = 24
 const DISPLAY_FOV = 34
-const LOOK_AT = new THREE.Vector3(0, -0.08, 0)
+const LOOK_AT = new THREE.Vector3(0, 0, 0)
 const LEVEL_POSES = [
   { target: { yaw: 0.3, pitch: -0.035 }, start: { yaw: -0.42, pitch: 0.13 } },
   { target: { yaw: -0.34, pitch: 0.09 }, start: { yaw: 0.38, pitch: -0.12 } },
@@ -157,6 +157,7 @@ export class SceneDirector {
     const target = LEVEL_POSES[this.level].target
     const depths: number[] = []
     const kinds = new Set<string>()
+    let transformChecksum = 0
     this.root.traverse((object) => {
       if (object instanceof THREE.Mesh) {
         const world = new THREE.Vector3()
@@ -164,6 +165,16 @@ export class SceneDirector {
         depths.push(world.z)
         kinds.add(object.geometry.type)
       }
+    })
+    this.sceneObjects.forEach((object, index) => {
+      transformChecksum += (index + 1) * (
+        object.position.x * 3.1 +
+        object.position.y * 5.3 +
+        object.position.z * 7.7 +
+        object.rotation.x * 11.1 +
+        object.rotation.y * 13.7 +
+        object.rotation.z * 17.3
+      )
     })
     return {
       yaw: this.currentView.yaw,
@@ -175,6 +186,7 @@ export class SceneDirector {
       depthSpread: depths.length ? Math.max(...depths) - Math.min(...depths) : 0,
       geometryKinds: [...kinds],
       objectCount: this.sceneObjects.length,
+      transformChecksum: Number(transformChecksum.toFixed(6)),
       projectorAspect: this.projector.aspect,
       textureAspect: this.identityTexture.canvas.width / this.identityTexture.canvas.height,
     }
@@ -260,80 +272,99 @@ export class SceneDirector {
   }
 
   private buildArchGarden() {
-    const columns = [
-      [-1.45, 0.05, 0.8, -0.1],
-      [-0.98, -0.1, -0.25, 0.12],
-      [-0.5, 0.08, 0.55, -0.08],
-      [0, -0.08, -0.5, 0.08],
-      [0.5, 0.1, 0.35, -0.1],
-      [0.98, -0.06, -0.35, 0.12],
-      [1.45, 0.04, 0.72, -0.08],
-    ] as const
-    columns.forEach(([x, y, z, angle], index) => {
-      this.addProjected(
-        new THREE.BoxGeometry(index % 2 ? 0.58 : 0.54, 4.65, index % 2 ? 0.34 : 0.48),
-        [x, y, z],
-        [0.02 * (index % 3 - 1), angle, angle * 0.22],
-      )
-    })
-    this.addProjected(new THREE.TorusGeometry(1.65, 0.21, 18, 96, Math.PI), [0, 0.72, 0.1], [0, 0, 0])
-    this.addProjected(new THREE.TorusGeometry(1.28, 0.15, 16, 80, Math.PI), [0, 0.48, 0.92], [0.06, -0.12, 0])
-    this.addProjected(new THREE.SphereGeometry(0.58, 28, 20), [-0.82, -1.24, 1.25], [0, 0, 0])
-    this.addProjected(new THREE.SphereGeometry(0.42, 24, 18), [0.95, 1.24, 0.92], [0, 0, 0])
-    this.addProjected(new THREE.SphereGeometry(0.3, 20, 16), [0.12, -1.86, 1.45], [0, 0, 0])
-    this.addSolidArch(2.12, 0.055, -0.95, '#ff5b4d', [0.04, 0.08, 0])
-    this.addSolidArch(2.38, 0.035, -1.28, '#4d7cff', [-0.05, -0.1, 0])
-    this.addPedestal([-1.6, -2.25, 0.2], 0.5)
-    this.addPedestal([1.45, -2.25, -0.35], 0.62)
+    this.buildDepthMosaic(0)
+    this.addProjected(new THREE.TorusGeometry(1.72, 0.22, 20, 96, Math.PI), [0, 0.55, 1.35], [0.04, 0.05, 0])
+    this.addProjected(new THREE.TorusGeometry(1.32, 0.15, 18, 80, Math.PI), [0, 0.25, -1.28], [-0.08, -0.12, 0])
+    this.addProjected(new THREE.SphereGeometry(0.62, 30, 22), [-0.92, -1.28, 2.05], [0, 0, 0])
+    this.addProjected(new THREE.SphereGeometry(0.46, 26, 20), [1.08, 1.18, -1.38], [0, 0, 0])
+    this.addProjected(new THREE.SphereGeometry(0.32, 22, 18), [0.42, -1.92, 1.12], [0, 0, 0])
+    this.addProjected(new THREE.CylinderGeometry(0.18, 0.42, 3.8, 24), [-1.42, -0.1, -0.86], [0.06, 0, -0.04])
+    this.addProjected(new THREE.CylinderGeometry(0.38, 0.16, 3.45, 24), [1.38, 0.08, 0.78], [-0.05, 0, 0.06])
   }
 
   private buildFoldTheatre() {
-    const stripWidth = 3.25 / 9
-    for (let index = 0; index < 9; index += 1) {
-      const x = -1.62 + stripWidth / 2 + index * stripWidth
-      const fold = index % 2 === 0 ? -1 : 1
-      const z = 0.16 + Math.abs(index - 4) * 0.18
-      this.addProjected(
-        new THREE.BoxGeometry(stripWidth + 0.035, 4.55, 0.16),
-        [x, Math.sin(index * 1.3) * 0.08, z],
-        [fold * 0.025, fold * 0.5, fold * 0.018],
-      )
-    }
-    this.addProjected(new THREE.TorusGeometry(1.88, 0.18, 18, 96, Math.PI), [0, 0.92, -0.02], [0.1, 0.2, 0])
-    this.addProjected(new THREE.CylinderGeometry(0.34, 0.5, 1.65, 24), [-1.36, -1.48, 1.15], [0.08, 0, -0.16])
-    this.addProjected(new THREE.CylinderGeometry(0.48, 0.28, 1.35, 24), [1.33, -1.62, 0.85], [-0.08, 0, 0.18])
-    this.addProjected(new THREE.SphereGeometry(0.38, 24, 18), [-1.18, 1.48, 1.24], [0, 0, 0])
-    this.addProjected(new THREE.SphereGeometry(0.52, 28, 20), [1.22, 1.18, 1.32], [0, 0, 0])
-    this.addSolidArch(2.22, 0.06, -0.92, '#4d7cff', [0.48, 0.24, 1.02])
-    this.addSolidArch(2.48, 0.04, -1.32, '#ff5b4d', [1.16, -0.14, 0.3])
+    this.buildDepthMosaic(1)
+    this.addProjected(new THREE.TorusGeometry(1.76, 0.2, 18, 96), [0, 0.12, 1.52], [0.42, 0.18, 0.82])
+    this.addProjected(new THREE.TorusGeometry(1.28, 0.13, 16, 80), [0, -0.18, -1.42], [1.08, -0.22, 0.28])
+    this.addProjected(new THREE.ConeGeometry(0.54, 1.74, 28), [-1.18, -1.42, 1.9], [0.12, 0.08, -0.18])
+    this.addProjected(new THREE.ConeGeometry(0.42, 1.5, 24), [1.3, -1.58, -1.18], [-0.12, 0.06, 0.2])
+    this.addProjected(new THREE.SphereGeometry(0.48, 28, 20), [-1.1, 1.42, -1.58], [0, 0, 0])
+    this.addProjected(new THREE.SphereGeometry(0.58, 30, 22), [1.05, 1.18, 1.82], [0, 0, 0])
+    this.addProjected(new THREE.OctahedronGeometry(0.5, 1), [0.15, -0.85, 2.18], [0.3, 0.2, 0.1])
   }
 
   private buildOrbitSculpture() {
+    this.buildDepthMosaic(2)
+    this.addProjected(new THREE.TorusGeometry(1.72, 0.19, 20, 112), [0, 0.06, 1.86], [0.82, 0.12, 0.24])
+    this.addProjected(new THREE.TorusGeometry(1.34, 0.13, 18, 96), [0, -0.1, -1.52], [0.24, 0.72, 0.92])
+    this.addProjected(new THREE.TorusGeometry(0.92, 0.1, 16, 80), [0.08, 0.18, 2.25], [1.12, -0.28, 0.52])
+    this.addProjected(new THREE.CylinderGeometry(0.24, 0.24, 4.15, 24), [0, 0, -1.82], [0.06, 0.08, 0.32])
+    this.addProjected(new THREE.SphereGeometry(0.52, 28, 20), [-1.02, 1.26, 1.52], [0, 0, 0])
+    this.addProjected(new THREE.SphereGeometry(0.4, 24, 18), [1.16, -1.28, -1.68], [0, 0, 0])
+    this.addProjected(new THREE.IcosahedronGeometry(0.48, 1), [0.98, 1.36, 2.1], [0.2, 0.4, 0.1])
+  }
+
+  private buildDepthMosaic(level: number) {
+    const width = 3.3
+    const height = 4.95
     const columns = 4
-    const rows = 5
-    const tileWidth = 3.3 / columns
-    const tileHeight = 4.6 / rows
+    const rows = 6
+    const cellWidth = width / columns
+    const cellHeight = height / rows
     for (let row = 0; row < rows; row += 1) {
       for (let column = 0; column < columns; column += 1) {
-        const index = row * columns + column
-        const angle = index / (columns * rows) * Math.PI * 2
-        const x = -1.65 + tileWidth / 2 + column * tileWidth
-        const y = 2.3 - tileHeight / 2 - row * tileHeight
-        const z = 0.2 + Math.sin(angle * 2) * 0.72
-        this.addProjected(
-          index % 5 === 0
-            ? new THREE.SphereGeometry(Math.min(tileWidth, tileHeight) * 0.55, 22, 16)
-            : new THREE.BoxGeometry(tileWidth + 0.045, tileHeight + 0.045, 0.18 + (index % 3) * 0.06),
-          [x + Math.cos(angle) * 0.06, y + Math.sin(angle) * 0.05, z],
-          [Math.sin(angle) * 0.12, Math.cos(angle) * 0.3, Math.sin(angle * 1.5) * 0.09],
-        )
+        const x0 = -width / 2 + column * cellWidth
+        const x1 = x0 + cellWidth
+        const y1 = height / 2 - row * cellHeight
+        const y0 = y1 - cellHeight
+        const diagonal = (row + column + level) % 2 === 0
+        const triangles: Array<Array<[number, number]>> = diagonal
+          ? [
+              [[x0, y0], [x1, y0], [x1, y1]],
+              [[x0, y0], [x1, y1], [x0, y1]],
+            ]
+          : [
+              [[x0, y0], [x1, y0], [x0, y1]],
+              [[x1, y0], [x1, y1], [x0, y1]],
+            ]
+        triangles.forEach((points, triangle) => {
+          const phase = row * 1.37 + column * 2.11 + triangle * 0.83
+          const z = level === 0
+            ? Math.sin(phase) * 1.62
+            : level === 1
+              ? Math.cos(phase * 1.18 + row * 0.42) * 1.86
+              : Math.sin(phase * 1.46 + column * 0.72) * 2.05
+          this.addDepthTriangle(points, z, 0.1 + Math.abs(z) * 0.11)
+        })
       }
     }
-    this.addProjected(new THREE.TorusGeometry(1.68, 0.2, 18, 112), [0, 0.05, 0.88], [0.86, 0.1, 0.28])
-    this.addProjected(new THREE.TorusGeometry(1.28, 0.12, 16, 96), [0, -0.1, 1.34], [0.28, 0.7, 0.92])
-    this.addProjected(new THREE.CylinderGeometry(0.3, 0.3, 4.2, 24), [0, 0, -0.5], [0.05, 0.1, 0.34])
-    this.addSolidArch(2.35, 0.045, -1.05, '#ff5b4d', [0.92, 0.18, 0.2])
-    this.addSolidArch(2.65, 0.035, -1.4, '#4d7cff', [0.22, 0.48, 1.12])
+  }
+
+  private addDepthTriangle(
+    points: Array<[number, number]>,
+    z: number,
+    thickness: number,
+  ) {
+    const scale = (CAMERA_RADIUS - z) / CAMERA_RADIUS
+    const centroid = points.reduce(
+      (sum, [x, y]) => [sum[0] + x / points.length, sum[1] + y / points.length],
+      [0, 0],
+    )
+    const inflated = points.map(([x, y]) => [
+      (centroid[0] + (x - centroid[0]) * 1.035) * scale,
+      (centroid[1] + (y - centroid[1]) * 1.035) * scale,
+    ] as [number, number])
+    const shape = new THREE.Shape()
+    shape.moveTo(inflated[0][0], inflated[0][1])
+    inflated.slice(1).forEach(([x, y]) => shape.lineTo(x, y))
+    shape.closePath()
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth: thickness,
+      bevelEnabled: false,
+      steps: 1,
+      curveSegments: 1,
+    })
+    this.addProjected(geometry, [0, 0, z - thickness], [0, 0, 0])
   }
 
   private addProjected(
@@ -346,39 +377,6 @@ export class SceneDirector {
     mesh.rotation.set(...rotation)
     this.root.add(mesh)
     this.sceneObjects.push(mesh)
-  }
-
-  private addSolidArch(
-    radius: number,
-    tube: number,
-    z: number,
-    color: THREE.ColorRepresentation,
-    rotation: [number, number, number],
-  ) {
-    const material = new THREE.MeshStandardMaterial({
-      color,
-      emissive: color,
-      emissiveIntensity: 0.28,
-      roughness: 0.42,
-      metalness: 0.18,
-    })
-    const arch = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 12, 96), material)
-    arch.position.z = z
-    arch.rotation.set(...rotation)
-    this.root.add(arch)
-    this.sceneObjects.push(arch)
-  }
-
-  private addPedestal(position: [number, number, number], radius: number) {
-    const material = new THREE.MeshStandardMaterial({
-      color: '#252d39',
-      roughness: 0.7,
-      metalness: 0.08,
-    })
-    const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 1.12, 0.34, 24), material)
-    pedestal.position.set(...position)
-    this.root.add(pedestal)
-    this.sceneObjects.push(pedestal)
   }
 
   private buildGround(level: number) {
@@ -495,8 +493,13 @@ export class SceneDirector {
       this.lockStartedAt = 0
     }
 
-    this.projectionUniforms.reveal.value = 0.96
-    this.projectionUniforms.boost.value = this.alignment > 0.82 ? (this.alignment - 0.82) * 1.7 : 0
+    this.projectionUniforms.reveal.value = 1
+    this.projectionUniforms.resolve.value = this.alignment
+    this.projectionUniforms.boost.value = this.completed
+      ? 0
+      : this.alignment > 0.82
+        ? (this.alignment - 0.82) * 1.2
+        : 0
     this.projectionUniforms.time.value = elapsed
     this.root.scale.setScalar(0.94 + this.transition * 0.06)
     this.root.rotation.z = (1 - this.transition) * 0.06
