@@ -91,8 +91,8 @@ export class SceneDirector {
     this.renderer.domElement.setAttribute('aria-label', 'Rotate the 3D projection sculpture')
     this.container.append(this.renderer.domElement)
 
-    this.scene.background = new THREE.Color('#07090d')
-    this.scene.fog = new THREE.FogExp2('#07090d', 0.038)
+    this.scene.background = new THREE.Color('#06110e')
+    this.scene.fog = new THREE.FogExp2('#06110e', 0.038)
     this.scene.add(this.root)
     this.setupLights()
     this.bindInput()
@@ -212,16 +212,16 @@ export class SceneDirector {
   }
 
   private setupLights() {
-    this.scene.add(new THREE.HemisphereLight('#d9e4ff', '#130d18', 1.8))
-    const key = new THREE.DirectionalLight('#fff8e8', 3.6)
+    this.scene.add(new THREE.HemisphereLight('#dfe4d7', '#0b211a', 1.8))
+    const key = new THREE.DirectionalLight('#e8e5d8', 3.6)
     key.position.set(-5, 7, 8)
     this.scene.add(key)
-    const coral = new THREE.PointLight('#ff5b4d', 22, 18, 1.7)
-    coral.position.set(4, 0.5, 4)
-    this.scene.add(coral)
-    const blue = new THREE.PointLight('#4d7cff', 18, 16, 1.8)
-    blue.position.set(-4, 1.5, 1)
-    this.scene.add(blue)
+    const copper = new THREE.PointLight('#9b553d', 20, 18, 1.7)
+    copper.position.set(4, 0.5, 4)
+    this.scene.add(copper)
+    const mineral = new THREE.PointLight('#5d8978', 15, 16, 1.8)
+    mineral.position.set(-4, 1.5, 1)
+    this.scene.add(mineral)
   }
 
   private bindInput() {
@@ -279,7 +279,7 @@ export class SceneDirector {
     this.clearRoot()
     const target = LEVEL_POSES[level].target
     this.root.rotation.set(-target.pitch, target.yaw, 0)
-    this.projectionUniforms.accent.value.set(level === 1 ? '#4d7cff' : '#ff5b4d')
+    this.projectionUniforms.accent.value.set(level === 1 ? '#bb7257' : '#9b553d')
     if (level === 0) this.buildArchGarden()
     if (level === 1) this.buildFoldTheatre()
     if (level === 2) this.buildOrbitSculpture()
@@ -427,8 +427,8 @@ export class SceneDirector {
     const grid = new THREE.GridHelper(
       22,
       level === 2 ? 28 : 22,
-      level === 1 ? '#4d7cff' : '#ff5b4d',
-      '#151b24',
+      level === 1 ? '#bb7257' : '#9b553d',
+      '#10241e',
     )
     grid.position.y = -2.62
     grid.position.z = -1.8

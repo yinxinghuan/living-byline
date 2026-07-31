@@ -29,7 +29,7 @@
 
 ### 投影与场景
 
-纹理固定为 `1024×1536`。`alterULogo()` 直接内联平台通用水印 SVG 的两条原始 path，并按关卡注入黑/纸白填色；不读取 Logo 照片、不描摹位图。三套 DOM 版式只组合 SVG 水印、用户名、完整矩形头像块、关卡编号和一行微型说明，分别使用纯水印、右侧头像窄带、中部头像横带的关系。shader 不翻转 Y；过程态用 facing mask 表现侧面，`resolve` 在对齐度 `0.72–0.98` 间把可见表面恢复为同一页面像素。
+纹理固定为 `1024×1536`。`alterULogo()` 直接内联平台通用水印 SVG 的两条原始 path，并按关卡注入粉笔绿、矿物绿或铜色；不读取 Logo 照片、不描摹位图。三套 Open Field DOM 版式只组合 SVG 水印、用户名、可选完整矩形头像场域、关卡编号和一行微型说明。第 1 关对 `1–12` 字符的短拉丁名使用竖轴，其他名字自动切换为横排块；任何情况都不做非均匀字体缩放。shader 不翻转 Y；过程态用 facing mask 表现侧面，`resolve` 在对齐度 `0.72–0.98` 间把可见表面恢复为同一页面像素。
 
 `splitMosaicRect()` 以关卡种子执行 2–5 层非对称 BSP 分割，长宽比会影响切分方向，停止概率随深度从 `0.18` 升到 `0.72`。部分区域再沿对角线拆分，最终形成 `12–36` 个面积跨度至少 `8:1` 的 ExtrudeGeometry。
 
@@ -43,7 +43,7 @@ DPR 在窄屏限制为 `1.25`，其他手机最多 `1.65`；IntersectionObserver
 
 - **新增关卡**：在 `LEVEL_POSES` 增加目标/起始姿态，在 `buildLevel()` 注册新的固定几何构建器。
 - **调手感**：修改 pointer 灵敏度、pitch `±1.42` 极限、`0.032` 锁定阈值与 `380ms` 保持时间；yaw 保持无边界。
-- **换排版**：编辑 `IdentityTexture.markup()` 的三套 composition，保持 `1024×1536`、水印 SVG path 真源与无跨域像素依赖。
+- **换排版**：编辑 `IdentityTexture.markup()` 的三套 composition 与用户名方向门槛，保持 `1024×1536`、水印 SVG path 真源、两种以内字体家族和无跨域像素依赖。
 - **换材质/几何**：编辑 `splitMosaicRect()` 的递归停止/切分比例、`buildDepthMosaic()` 的深度分档或三个 `build*()` 的空间物件；投影承载体继续使用共享 `projectedMaterial`。
 - **改 shader**：编辑 `ProjectedMaterial.ts`，保持固定 projector matrix、正面 mask 与不翻转 Y 的合同。
 - **改 UI/声音/平台**：分别编辑 `style.css`、`audio.ts`、`src/shared/runtime/bridge.ts`。

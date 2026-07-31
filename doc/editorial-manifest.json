@@ -1,0 +1,47 @@
+{
+  "system_name": "Living Byline — Open Field",
+  "format": "1024x1536 portrait projection artwork",
+  "language": "en",
+  "grid": {
+    "columns": 5,
+    "rows": 12,
+    "margin": 62,
+    "baseline": 18,
+    "permitted_break": "the player name may form a vertical moving axis"
+  },
+  "hierarchy": [
+    "AlterU vector mark or player name",
+    "player identity",
+    "edition descriptor",
+    "level metadata"
+  ],
+  "typography": {
+    "families": [
+      "Avenir Next",
+      "PingFang SC"
+    ],
+    "styles": [
+      "Demi Bold",
+      "Regular"
+    ]
+  },
+  "palette": {
+    "chalk": "#DFE4D7",
+    "mineral": "#15392F",
+    "copper": "#9B553D",
+    "light_copper": "#BB7257"
+  },
+  "image_role": "field",
+  "invariants": [
+    "official AlterU vector mark",
+    "five-field open grid",
+    "quiet upper metadata anchors",
+    "mineral and copper color roles",
+    "unscaled player typography"
+  ],
+  "variants": [
+    "chalk field with moving name axis",
+    "portrait field interrupted by the vector mark",
+    "copper field with mineral mark block"
+  ]
+}

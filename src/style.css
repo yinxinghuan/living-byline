@@ -1,15 +1,15 @@
 :root {
-  color: #f3f0e8;
-  background: #07090d;
-  font-family: Inter, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #e8e5d8;
+  background: #06110e;
+  font-family: "Avenir Next", "Helvetica Neue", "PingFang SC", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --lb-paper: #f3f0e8;
-  --lb-ink: #07090d;
-  --lb-coral: #ff5b4d;
-  --lb-blue: #4d7cff;
-  --lb-mint: #a8ffd8;
-  --lb-line: rgba(243, 240, 232, 0.22);
+  --lb-paper: #dfe4d7;
+  --lb-ink: #06110e;
+  --lb-mineral: #15392f;
+  --lb-copper: #9b553d;
+  --lb-sage: #b9ddc7;
+  --lb-line: rgba(223, 228, 215, 0.22);
 }
 
 * {
@@ -41,9 +41,7 @@ button {
   min-height: 480px;
   overflow: hidden;
   isolation: isolate;
-  background:
-    radial-gradient(circle at 50% 44%, rgba(77, 124, 255, 0.08), transparent 42%),
-    #07090d;
+  background: #06110e;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -75,9 +73,7 @@ button {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(7, 9, 13, 0.76) 0%, transparent 18%, transparent 73%, rgba(7, 9, 13, 0.82) 100%),
-    radial-gradient(circle at center, transparent 56%, rgba(7, 9, 13, 0.5) 100%);
+  background: linear-gradient(180deg, rgba(6, 17, 14, 0.72) 0%, transparent 18%, transparent 74%, rgba(6, 17, 14, 0.78) 100%);
   transition: opacity 0.32s ease;
 }
 
@@ -118,8 +114,8 @@ button {
   max-width: min(58vw, 300px);
   overflow: hidden;
   color: var(--lb-paper);
-  font: 900 clamp(24px, 6.6vw, 38px) / 0.92 "Arial Black", "Helvetica Neue", "PingFang SC", sans-serif;
-  letter-spacing: -0.075em;
+  font: 600 clamp(24px, 6.6vw, 38px) / 0.94 "Avenir Next", "Helvetica Neue", "PingFang SC", sans-serif;
+  letter-spacing: -0.055em;
   overflow-wrap: anywhere;
 }
 
@@ -175,7 +171,7 @@ button {
   top: 50%;
   width: 8px;
   height: 1px;
-  background: var(--lb-coral);
+  background: var(--lb-copper);
 }
 
 .lb-align {
@@ -206,10 +202,9 @@ button {
   border-radius: 50%;
   color: var(--lb-paper);
   background:
-    radial-gradient(circle, transparent 0 41%, rgba(7, 9, 13, 0.78) 43% 100%),
-    conic-gradient(var(--lb-mint) calc(var(--lb-alignment, 0) * 1turn), rgba(243, 240, 232, 0.18) 0);
-  box-shadow: 0 0 calc(var(--lb-alignment, 0) * 28px) rgba(168, 255, 216, 0.38);
-  transition: box-shadow 0.16s ease;
+    radial-gradient(circle, transparent 0 41%, rgba(6, 17, 14, 0.84) 43% 100%),
+    conic-gradient(var(--lb-sage) calc(var(--lb-alignment, 0) * 1turn), rgba(223, 228, 215, 0.18) 0);
+  transition: color 0.16s ease;
 }
 
 .lb-align__reticle i {
@@ -236,7 +231,7 @@ button {
   padding: 2px 3px;
   text-align: center;
   color: inherit;
-  background: #07090d;
+  background: #06110e;
   font: 800 9px / 1 ui-monospace, "SFMono-Regular", monospace;
 }
 
@@ -258,7 +253,7 @@ button {
 }
 
 .lb-game.is-near .lb-align__reticle {
-  color: var(--lb-mint);
+  color: var(--lb-sage);
   animation: lb-reticle-lock 0.72s ease-in-out infinite alternate;
 }
 
@@ -287,7 +282,7 @@ button {
 .lb-ghost i {
   position: absolute;
   inset: 5px;
-  border: 1px solid rgba(255, 91, 77, 0.78);
+  border: 1px solid rgba(155, 85, 61, 0.86);
   border-radius: 50%;
 }
 
@@ -307,9 +302,8 @@ button {
   gap: 14px;
   padding: 15px 15px 15px 17px;
   color: var(--lb-ink);
-  background: rgba(243, 240, 232, 0.96);
-  border-left: 5px solid var(--lb-coral);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.38);
+  background: rgba(223, 228, 215, 0.97);
+  border-left: 5px solid var(--lb-copper);
   animation: lb-panel-in 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
@@ -330,8 +324,8 @@ button {
 .lb-complete strong {
   display: block;
   margin-top: 5px;
-  font: 900 clamp(18px, 5.7vw, 28px) / 1 "Arial Black", "PingFang SC", sans-serif;
-  letter-spacing: -0.04em;
+  font: 600 clamp(18px, 5.7vw, 28px) / 1 "Avenir Next", "Helvetica Neue", "PingFang SC", sans-serif;
+  letter-spacing: -0.035em;
 }
 
 .lb-stamps {
@@ -354,7 +348,7 @@ button {
 .lb-stamps i.is-active {
   color: var(--lb-ink);
   border-color: var(--lb-ink);
-  background: var(--lb-mint);
+  background: var(--lb-sage);
 }
 
 .lb-complete__action,
@@ -398,7 +392,7 @@ button {
 .lb-complete__action:focus-visible,
 .lb-error button:focus-visible,
 .lb-stage__canvas:focus-visible {
-  outline: 2px solid var(--lb-blue);
+  outline: 2px solid var(--lb-copper);
   outline-offset: 3px;
 }
 
@@ -410,7 +404,7 @@ button {
   place-content: center;
   justify-items: start;
   padding: 34px;
-  background: #07090d;
+  background: #06110e;
 }
 
 .lb-error__mark {
@@ -418,7 +412,7 @@ button {
   width: 76px;
   height: 52px;
   margin-bottom: 24px;
-  border: 1px solid rgba(255, 177, 90, 0.56);
+  border: 1px solid rgba(187, 114, 87, 0.64);
 }
 
 .lb-error__mark span {
@@ -427,7 +421,7 @@ button {
   right: 12px;
   top: 25px;
   height: 2px;
-  background: #ffb15a;
+  background: #bb7257;
 }
 
 .lb-error__mark span:first-child {
@@ -439,7 +433,7 @@ button {
 }
 
 .lb-error > span {
-  color: #ffb15a;
+  color: #bb7257;
   font: 700 11px / 1 ui-monospace, monospace;
   letter-spacing: 0.16em;
 }
@@ -448,8 +442,8 @@ button {
   max-width: 100%;
   margin-top: 12px;
   overflow-wrap: anywhere;
-  font: 900 clamp(38px, 12vw, 72px) / 0.86 "Arial Black", "PingFang SC", sans-serif;
-  letter-spacing: -0.07em;
+  font: 600 clamp(38px, 12vw, 72px) / 0.88 "Avenir Next", "Helvetica Neue", "PingFang SC", sans-serif;
+  letter-spacing: -0.055em;
 }
 
 .lb-error p {

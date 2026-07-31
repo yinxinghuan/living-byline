@@ -6,13 +6,13 @@
 
 | State | 390×844 | 320×568 |
 |---|---|---|
-| 拱门庭院错误视角 | `_qa/ui/brand-free-orbit-rework-entry-platform-layout-390x844.png` | `_qa/ui/brand-free-orbit-rework-entry-platform-layout-320x568.png` |
-| 水平多圈 + 高俯仰 | `_qa/ui/brand-free-orbit-rework-free-orbit-platform-layout-390x844.png` | `_qa/ui/brand-free-orbit-rework-free-orbit-platform-layout-320x568.png` |
-| 01 水印 × 用户名 | `_qa/ui/brand-free-orbit-rework-level1-complete-platform-layout-390x844.png` | `_qa/ui/brand-free-orbit-rework-level1-complete-platform-layout-320x568.png` |
-| 02 水印 × 头像窄带 | `_qa/ui/brand-free-orbit-rework-level2-complete-platform-layout-390x844.png` | `_qa/ui/brand-free-orbit-rework-level2-complete-platform-layout-320x568.png` |
-| 03 水印 × 头像横带 × 用户名 | `_qa/ui/brand-free-orbit-rework-level3-complete-platform-layout-390x844.png` | `_qa/ui/brand-free-orbit-rework-level3-complete-platform-layout-320x568.png` |
-| 错误恢复 | — | `_qa/ui/brand-free-orbit-rework-error-platform-layout-320x568.png` |
-| 外部访客栏发布检查 | `_qa/ui/brand-free-orbit-rework-entry-external-guest-390x844.png` | — |
+| 拱门庭院错误视角 | `_qa/ui/open-field-selected-entry-platform-layout-390x844.png` | `_qa/ui/open-field-selected-entry-platform-layout-320x568.png` |
+| 水平多圈 + 高俯仰 | `_qa/ui/open-field-selected-free-orbit-platform-layout-390x844.png` | `_qa/ui/open-field-selected-free-orbit-platform-layout-320x568.png` |
+| 01 Open Field | `_qa/ui/open-field-selected-level1-complete-platform-layout-390x844.png` | `_qa/ui/open-field-selected-level1-complete-platform-layout-320x568.png` |
+| 02 Living Field | `_qa/ui/open-field-selected-level2-complete-platform-layout-390x844.png` | `_qa/ui/open-field-selected-level2-complete-platform-layout-320x568.png` |
+| 03 Optical Identity | `_qa/ui/open-field-selected-level3-complete-platform-layout-390x844.png` | `_qa/ui/open-field-selected-level3-complete-platform-layout-320x568.png` |
+| 错误恢复 | — | `_qa/ui/open-field-selected-error-platform-layout-320x568.png` |
+| 外部访客栏发布检查 | `_qa/ui/open-field-selected-entry-external-guest-390x844.png` | — |
 
 ## 本轮发现与修复
 
@@ -64,10 +64,34 @@
 - **修复**：删除高频扫描线和二次 Y 翻转；加入 projector-facing mask；投影纸面不乘法线阴影。
 - **复验**：两档手机三关正确视角中，用户名、`ULTRALONG` 与 `ALTERU` 均正向，侧面无镜像文字。
 
+### P1 — 选定 Open Field 后，旧字体与色彩仍显得业余
+
+- **问题**：产品实现仍使用 `Arial Black`、高饱和珊瑚/电蓝和三个互不成系列的版式，与选定的 03 稿不一致。
+- **修复**：三关统一采用粉笔绿、矿物绿、铜色及 `Avenir Next / Helvetica Neue / PingFang SC`；Logo、元数据锚点和高留白成为系列不变量，头像参与和文字方向成为变量。
+- **复验**：三张完成稿在缩略尺寸下仍可识别为同一系列，但分别呈现移动名字轴、头像横向场域与右下水印色块。
+
+### P1 — 长混合用户名不适合固定竖排
+
+- **问题**：首次 Open Field 截图中，短拉丁名规则被直接套到 `平台林思远ULTRALONG`，形成拥挤的混合竖向字柱。
+- **修复**：仅 `1–12` 个拉丁字母、数字、空格、点号或连字符使用竖轴；中文、混合文字和长名字自动切为右侧横排块。
+- **复验**：`390×844` 与 `320×568` 的 01 完成稿均显示正向、未拉伸的两行混合用户名，未碰撞水印和页面边界。
+
 ## 自动化与结论
 
 - 390×844 与 320×568 三关真实触控全部通过。
 - 无横向 DOM 溢出；长用户名身份来源为 `player`。
 - 3D 景深、球体/拱门类型、对象数、投影比例和完成角误差均有机械断言。
 - 完成前后场景不重建、不共面化、不淡出装饰；唯一变化是观察相机姿态。
-- 视觉结论：错误视角的空间复杂度与正确视角的平面稿完成度均达到发布标准。
+- 视觉结论：Open Field 已在保持错误视角空间复杂度的同时，让三关正确视角形成统一、可扩展的平面设计系列；本轮无 P0/P1 遗留。
+
+| Category | Score |
+|---|---:|
+| Hierarchy | 5 |
+| Coherence | 5 |
+| Readability | 4 |
+| Game feel | 4 |
+| Asset quality | 5 |
+| Responsive UX | 4 |
+| Polish | 4 |
+
+平均 `4.43 / 5`；无类别低于 3。

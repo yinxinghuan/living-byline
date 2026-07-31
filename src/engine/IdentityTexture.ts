@@ -66,76 +66,94 @@ export class IdentityTexture {
     const safeName = escapeMarkup(this.name)
     const platform = escapeMarkup(this.platform)
     const avatar = escapeMarkup(this.avatarDataUrl)
+    const useVerticalName = /^[A-Za-z0-9._ -]{1,12}$/.test(this.name)
     const editions = [
       {
-        accent: '#ff5b4d',
-        second: '#3156ff',
+        field: '#dfe4d7',
+        ink: '#15392f',
+        accent: '#9b553d',
         number: '01',
-        kicker: 'A NAME / IN ONE PRECISE VIEW',
+        kicker: 'IDENTITY MOVES / THROUGH DEPTH',
       },
       {
-        accent: '#3156ff',
-        second: '#ff5b4d',
+        field: '#15392f',
+        ink: '#dfe4d7',
+        accent: '#bb7257',
         number: '02',
-        kicker: 'A FACE / HELD BY DISTANCE',
+        kicker: 'ONE NAME / ONE TRUE VIEW',
       },
       {
-        accent: '#ff5b4d',
-        second: '#3156ff',
+        field: '#9b553d',
+        ink: '#e8e5d8',
+        accent: '#15392f',
         number: '03',
-        kicker: 'YOU / SEEN FROM EVERY SIDE',
+        kicker: 'OPTICAL IDENTITY / ALTERU EDITION',
       },
     ][level]
-    const name = `${Math.min(190, nameSize(this.name) * 1.55)}px`
+    const displaySize = `${Math.min(176, nameSize(this.name) * 1.42)}px`
+    const compactSize = `${Math.min(136, nameSize(this.name) * 1.14)}px`
+    const openFieldNameStyle = useVerticalName
+      ? `right:72px;top:500px;max-height:760px;writing-mode:vertical-rl;font-size:${compactSize};line-height:.84`
+      : `left:360px;right:62px;top:570px;text-align:right;font-size:${Math.min(104, nameSize(this.name))}px;line-height:.82`
     const compositions = [
-      `<div style="position:absolute;inset:0;background:#f3f0e8;color:#07090d;overflow:hidden">
-        <div style="position:absolute;left:-178px;top:-128px;width:940px;height:940px">${alterULogo('#07090d')}</div>
-        <div style="position:absolute;right:0;top:0;width:176px;height:100%;background:${editions.accent}"></div>
-        <div style="position:absolute;right:48px;top:54px;font:900 210px/.76 Arial Black,Arial,sans-serif;color:#f3f0e8;letter-spacing:-.14em;writing-mode:vertical-rl">${editions.number}</div>
-        <div style="position:absolute;left:68px;right:228px;bottom:88px">
-          <span style="display:block;margin-bottom:24px;font:800 20px/1 Arial,sans-serif;letter-spacing:.19em">${editions.kicker}</span>
-          <strong style="display:block;font:900 ${name}/.78 Arial Black,Arial,PingFang SC,sans-serif;letter-spacing:-.08em;overflow-wrap:anywhere">${safeName}</strong>
+      `<div style="position:absolute;inset:0;background:${editions.field};color:${editions.ink};overflow:hidden">
+        <div style="position:absolute;left:-168px;top:194px;width:890px;height:890px">${alterULogo(editions.ink)}</div>
+        <div style="position:absolute;left:62px;right:62px;top:54px;display:flex;justify-content:space-between;font:600 18px/1.1 'Avenir Next','Helvetica Neue',Arial,sans-serif;letter-spacing:.17em">
+          <span>ALTERU / OPEN FIELD</span><span>${editions.number}</span>
+        </div>
+        <strong style="position:absolute;${openFieldNameStyle};font-family:'Avenir Next','Helvetica Neue',Arial,'PingFang SC',sans-serif;font-weight:600;letter-spacing:-.055em;overflow-wrap:anywhere">${safeName}</strong>
+        <span style="position:absolute;left:62px;bottom:58px;font:600 18px/1.22 'Avenir Next','Helvetica Neue',Arial,sans-serif;letter-spacing:.16em">${editions.kicker}</span>
+        <div style="position:absolute;right:62px;bottom:58px;width:84px;height:8px;background:${editions.accent}"></div>
+      </div>`,
+      `<div style="position:absolute;inset:0;background:${editions.field};color:${editions.ink};overflow:hidden">
+        <div style="position:absolute;left:62px;right:62px;top:54px;display:flex;justify-content:space-between;font:600 18px/1.1 'Avenir Next','Helvetica Neue',Arial,sans-serif;letter-spacing:.17em">
+          <span>LIVING BYLINE</span><span>${editions.number} / 03</span>
+        </div>
+        <div style="position:absolute;left:0;right:0;top:310px;height:570px;overflow:hidden;background:#080b09">
+          <img src="${avatar}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 42%;filter:grayscale(1) contrast(1.12)"/>
+          <div style="position:absolute;inset:0;background:${editions.field};opacity:.18"></div>
+        </div>
+        <div style="position:absolute;left:312px;top:568px;width:400px;height:400px">${alterULogo(editions.ink)}</div>
+        <strong style="position:absolute;left:62px;right:62px;bottom:126px;font:600 ${compactSize}/.78 'Avenir Next','Helvetica Neue',Arial,'PingFang SC',sans-serif;letter-spacing:-.055em;overflow-wrap:anywhere">${safeName}</strong>
+        <div style="position:absolute;left:62px;right:62px;bottom:58px;display:flex;justify-content:space-between;font:600 18px/1.15 'Avenir Next','Helvetica Neue',Arial,sans-serif;letter-spacing:.16em">
+          <span>ALTERU EDITIONS</span><span style="color:${editions.accent}">${editions.kicker}</span>
         </div>
       </div>`,
-      `<div style="position:absolute;inset:0;background:${editions.accent};color:#f3f0e8;overflow:hidden">
-        <div style="position:absolute;right:0;top:0;width:29%;height:100%;overflow:hidden;background:#07090d">
-          <img src="${avatar}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center"/>
+      `<div style="position:absolute;inset:0;background:${editions.field};color:${editions.ink};overflow:hidden">
+        <div style="position:absolute;left:62px;right:62px;top:54px;display:flex;justify-content:space-between;font:600 18px/1.1 'Avenir Next','Helvetica Neue',Arial,sans-serif;letter-spacing:.17em">
+          <span>${editions.kicker}</span><span>${editions.number}</span>
         </div>
-        <div style="position:absolute;left:-188px;top:84px;width:960px;height:960px">${alterULogo('#f3f0e8')}</div>
-        <div style="position:absolute;right:34px;top:52px;font:900 205px/.76 Arial Black,Arial,sans-serif;color:${editions.second};letter-spacing:-.14em">${editions.number}</div>
-        <div style="position:absolute;left:62px;right:34%;bottom:74px">
-          <span style="display:block;margin-bottom:22px;font:800 20px/1.15 Arial,sans-serif;letter-spacing:.17em">${editions.kicker}</span>
-          <strong style="display:block;font:900 ${Math.max(72, nameSize(this.name) * 1.08)}px/.78 Arial Black,Arial,PingFang SC,sans-serif;letter-spacing:-.08em;overflow-wrap:anywhere">${safeName}</strong>
+        <strong style="position:absolute;left:54px;right:54px;top:230px;font:600 ${displaySize}/.74 'Avenir Next','Helvetica Neue',Arial,'PingFang SC',sans-serif;letter-spacing:-.07em;overflow-wrap:anywhere">${safeName}</strong>
+        <div style="position:absolute;right:0;bottom:228px;width:63%;height:510px;background:${editions.accent}">
+          <div style="position:absolute;left:116px;top:58px;width:400px;height:400px">${alterULogo(editions.ink)}</div>
         </div>
-      </div>`,
-      `<div style="position:absolute;inset:0;background:#07090d;color:#f3f0e8;overflow:hidden">
-        <div style="position:absolute;left:102px;top:-122px;width:900px;height:900px">${alterULogo('#f3f0e8')}</div>
-        <div style="position:absolute;left:0;right:0;top:700px;height:304px;overflow:hidden;background:${editions.second}">
-          <img src="${avatar}" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center 42%"/>
+        <div style="position:absolute;left:62px;right:62px;bottom:58px;display:flex;justify-content:space-between;font:600 18px/1.15 'Avenir Next','Helvetica Neue',Arial,sans-serif;letter-spacing:.16em">
+          <span>ALTERU / 2026</span><span>FIELD NOTE 003</span>
         </div>
-        <div style="position:absolute;left:62px;right:60px;bottom:72px;display:flex;align-items:flex-end;justify-content:space-between;gap:36px">
-          <strong style="max-width:760px;font:900 ${name}/.76 Arial Black,Arial,PingFang SC,sans-serif;letter-spacing:-.085em;overflow-wrap:anywhere">${safeName}</strong>
-          <div style="flex:none;color:${editions.accent};font:900 230px/.7 Arial Black,Arial,sans-serif;letter-spacing:-.15em">${editions.number}</div>
-        </div>
-        <span style="position:absolute;left:64px;top:52px;font:800 20px/1 Arial,sans-serif;letter-spacing:.19em">${editions.kicker}</span>
       </div>`,
     ]
-    return `<div style="position:relative;width:100%;height:100%;overflow:hidden;font-family:Arial,Helvetica,PingFang SC,sans-serif">
+    return `<div style="position:relative;width:100%;height:100%;overflow:hidden;font-family:'Avenir Next','Helvetica Neue',Arial,'PingFang SC',sans-serif">
       ${compositions[level]}
-      <div style="position:absolute;right:34px;bottom:28px;font:800 17px/1 Arial,sans-serif;letter-spacing:.18em;color:${level === 0 ? '#07090d' : '#f3f0e8'}">${platform.toUpperCase()} / 0${level + 1}</div>
+      <div style="position:absolute;right:62px;bottom:96px;font:600 16px/1 'Avenir Next','Helvetica Neue',Arial,sans-serif;letter-spacing:.18em;color:${editions.ink}">${platform.toUpperCase()} / 0${level + 1}</div>
     </div>`
   }
 
   private renderCanvasFallback(level: number) {
     const ctx = this.context
-    ctx.fillStyle = '#f3f0e8'
+    const palettes = [
+      ['#dfe4d7', '#15392f', '#9b553d'],
+      ['#15392f', '#dfe4d7', '#bb7257'],
+      ['#9b553d', '#e8e5d8', '#15392f'],
+    ] as const
+    const [field, ink, accent] = palettes[level]
+    ctx.fillStyle = field
     ctx.fillRect(0, 0, this.width, this.height)
-    ctx.fillStyle = level === 1 ? '#4d7cff' : '#ff5b4d'
-    ctx.fillRect(level === 0 ? 848 : 0, 0, level === 0 ? 176 : 1024, 1536)
-    ctx.fillStyle = '#07090d'
-    ctx.font = '900 146px Arial'
+    ctx.fillStyle = accent
+    ctx.fillRect(level === 0 ? 820 : 380, level === 2 ? 920 : 0, level === 0 ? 20 : 644, level === 2 ? 420 : 12)
+    ctx.fillStyle = ink
+    ctx.font = '600 146px "Avenir Next", "Helvetica Neue", Arial'
     ctx.fillText(this.name.slice(0, 12), 62, 1370, 760)
-    ctx.font = '800 28px Arial'
+    ctx.font = '600 28px "Avenir Next", "Helvetica Neue", Arial'
     ctx.fillText(`${this.platform.toUpperCase()} / 0${level + 1}`, 64, 1480)
   }
 

@@ -14,7 +14,7 @@ export type ProjectionUniforms = {
 
 export function createProjectionMaterial(
   texture: THREE.Texture,
-  color = new THREE.Color('#161b24'),
+  color = new THREE.Color('#10241e'),
 ) {
   const uniforms: ProjectionUniforms = {
     projectorProjection: { value: new THREE.Matrix4() },
@@ -25,7 +25,7 @@ export function createProjectionMaterial(
     resolve: { value: 0 },
     boost: { value: 0 },
     time: { value: 0 },
-    accent: { value: new THREE.Color('#ff5b4d') },
+    accent: { value: new THREE.Color('#9b553d') },
   }
 
   const material = new THREE.ShaderMaterial({
